@@ -3,14 +3,13 @@ $v = Settings::get('ionize_version');
 $c = '?v='.$v;
 ?>
 <!DOCTYPE html>
-<html>
+<html<?php $fontScale = (int) Settings::get('backend_font_scale'); if($fontScale > 0) { ?> class="sizePlus<?php echo $fontScale; ?>"<?php } ?>>
 <head>
 <meta charset='utf-8' />
 <title><?php echo lang('ionize_administration') . ' | ' . (Settings::get('site_title') ? Settings::get('site_title') : ''); ?></title>
 <meta http-equiv="imagetoolbar" content="no" />
-<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-
-<link rel="shortcut icon" href="<?php echo theme_url(); ?>images/favicon.ico" type="image/x-icon" />
+<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE10">
+<link rel="shortcut icon" href="<?php echo admin_style_url(); ?>images/favicon.ico" type="image/x-icon" />
 
 <link type="text/css" rel="stylesheet" href="<?php echo theme_url(); ?>javascript/mochaui/Themes/ionize/css/core.css<?php echo $c ?>" />
 <link type="text/css" rel="stylesheet" href="<?php echo theme_url(); ?>javascript/mochaui/Themes/ionize/css/menu.css<?php echo $c ?>" />
@@ -27,8 +26,10 @@ $c = '?v='.$v;
 <!--[if lt IE 9]><script type="text/javascript" src="<?php echo theme_url(); ?>javascript/excanvas_r43_compressed.js<?php echo $c ?>"></script><![endif]-->
 
 <!-- Mootools 1.4.5  -->
-<script type="text/javascript" src="<?php echo theme_url(); ?>javascript/mootools-core-1.4.5-full-nocompat-yc.js<?php echo $c ?>"></script>
-<script type="text/javascript" src="<?php echo theme_url(); ?>javascript/mootools-more-1.4.0.1-yc.js<?php echo $c ?>"></script>
+<script type="text/javascript" src="<?php echo theme_url(); ?>javascript/mootools-core-1.5.0-full-nocompat-yc.js"></script>
+<script type="text/javascript" src="<?php echo theme_url(); ?>javascript/mootools-more-1.5.0-yc.js"></script>
+<script type="text/javascript" src="<?php echo theme_url() ?>javascript/ionize/ionize_mootools_enhance.js"></script>
+<script type="text/javascript" src="<?php echo theme_url(); ?>javascript/mootools_locale/eu.js"></script>
 
 <?php if (
 	Settings::get('dashboard_google') == '1'
@@ -41,6 +42,12 @@ $c = '?v='.$v;
 	google.load("visualization", "1", {packages:["corechart"], 'language': '<?php echo Settings::get_lang() ?>'});
 </script>
 <?php endif ;?>
+
+<?php /*  Autocompleter */ ?>
+<link type="text/css" rel="stylesheet" href="<?php echo theme_url() ?>javascript/Autocompleter/Autocompleter.css<?php echo $c ?>" />
+<script type="text/javascript" src="<?php echo theme_url() ?>javascript/Autocompleter/Observer.js<?php echo $c ?>"></script>
+<script type="text/javascript" src="<?php echo theme_url() ?>javascript/Autocompleter/Autocompleter.js<?php echo $c ?>"></script>
+<script type="text/javascript" src="<?php echo theme_url() ?>javascript/Autocompleter/Autocompleter.Request.js<?php echo $c ?>"></script>
 
 <!-- Upload -->
 <script type="text/javascript" src="<?php echo theme_url(); ?>javascript/Request.File.js<?php echo $c ?>"></script>
@@ -58,6 +65,9 @@ $c = '?v='.$v;
 <!-- Date Picker -->
 <script type="text/javascript" src="<?php echo theme_url(); ?>javascript/mootools-datepicker/datepicker.js<?php echo $c ?>"></script>
 <link type="text/css" rel="stylesheet" href="<?php echo theme_url(); ?>javascript/mootools-datepicker/datepicker_dashboard/datepicker_dashboard.css<?php echo $c ?>" />
+
+<!-- Color Picker -->
+<script type="text/javascript" src="<?php echo theme_url(); ?>javascript/jscolor/jscolor.js<?php echo $c ?>"></script>
 
 <!-- Tab Swapper -->
 <script type="text/javascript" src="<?php echo theme_url(); ?>javascript/TabSwapper.js<?php echo $c ?>"></script>
@@ -92,18 +102,16 @@ $c = '?v='.$v;
 <script type="text/javascript" src="<?php echo theme_url(); ?>javascript/soundmanager/script/360player.js<?php echo $c ?>"></script>
 <script type="text/javascript">
 	soundManager.setup({
-		url: '<?php echo theme_url() ?>javascript/soundmanager/swf/',
-		preferFlash: false,
-		allowScriptAccess: 'always'
+		url					: '<?php echo theme_url() ?>javascript/soundmanager/swf/',
+		preferFlash			: false,
+		allowScriptAccess	: 'always'
 	});
 	if (window.location.href.match(/html5/i)) {
 		// for testing IE 9, etc.
 		soundManager.useHTML5Audio = true;
 	}
-</script>
 
-<!-- Base URL & languages translations available for javascript -->
-<script type="text/javascript">
+	// Base URL & languages translations available for javascript
 	
 	/** 
 	 * Global JS variables.
@@ -162,6 +170,8 @@ $c = '?v='.$v;
 <script type="text/javascript" src="<?php echo theme_url(); ?>javascript/ionize/ionize_extendlinkmanager.js<?php echo $c ?>"></script>
 <script type="text/javascript" src="<?php echo theme_url(); ?>javascript/ionize/ionize_extendmediamanager.js<?php echo $c ?>"></script>
 <script type="text/javascript" src="<?php echo theme_url(); ?>javascript/ionize/ionize_staticitemmanager.js<?php echo $c ?>"></script>
+<script type="text/javascript" src="<?php echo theme_url(); ?>javascript/ionize/ionize_contenttypemanager.js<?php echo $c ?>"></script>
+<script type="text/javascript" src="<?php echo theme_url(); ?>javascript/ionize/ionize_contentelementmanager.js<?php echo $c ?>"></script>
 <script type="text/javascript" src="<?php echo theme_url(); ?>javascript/ionize/ionize_itemsmanager.js<?php echo $c ?>"></script>
 <script type="text/javascript" src="<?php echo theme_url(); ?>javascript/ionize/ionize_tinymce.js<?php echo $c ?>"></script>
 <script type="text/javascript" src="<?php echo theme_url(); ?>javascript/ionize/ionize_tree.js<?php echo $c ?>"></script>
@@ -172,6 +182,8 @@ $c = '?v='.$v;
 <script type="text/javascript" src="<?php echo theme_url(); ?>javascript/ionize/ionize_tracker.js<?php echo $c ?>"></script>
 <script type="text/javascript" src="<?php echo theme_url(); ?>javascript/ionize/ionize_select.js<?php echo $c ?>"></script>
 <script type="text/javascript" src="<?php echo theme_url(); ?>javascript/ionize/ionize_button.js<?php echo $c ?>"></script>
+<script type="text/javascript" src="<?php echo theme_url(); ?>javascript/ionize/ionize_tabs.js<?php echo $c ?>"></script>
+<script type="text/javascript" src="<?php echo theme_url(); ?>javascript/ionize/ionize_ui.js<?php echo $c ?>"></script>
 
 <!-- Authority -->
 <script type="text/javascript" src="<?php echo theme_url(); ?>javascript/ionize/ionize_authority.js<?php echo $c ?>"></script>
@@ -212,22 +224,7 @@ $c = '?v='.$v;
 
 <script type="text/javascript">
 
-	// Global MediaManager
-	var mediaManager = new IonizeMediaManager(
-	{
-		baseUrl: base_url,
-		adminUrl: admin_url,
-		container:'mediaContainer',
-		fileButton:'.fmButton',
-		wait:'waitPicture',
-        resizeOnUpload: '<?php echo Settings::get('resize_on_upload'); ?>',
-        uploadAutostart: '<?php echo Settings::get('upload_autostart'); ?>',
-        uploadMode: '<?php echo Settings::get('upload_mode'); ?>',
-		thumbSize: <?php echo (Settings::get('media_thumb_size') != '') ? Settings::get('media_thumb_size') : 120 ;?>
-	});
-
 	var extendManager =  new ION.ExtendManager();
-//	var extendLinkManager =  new ION.ExtendLinkManager();
 	var staticItemManager =  new ION.StaticItemManager();
 
 	// If user's theme has a tinyMCE.css content CSS file, load it.
@@ -245,7 +242,6 @@ $c = '?v='.$v;
 	var smallTinyButtons2 = '<?php echo Settings::get('smalltinybuttons2'); ?>';
 	var smallTinyButtons3 = '<?php echo Settings::get('smalltinybuttons3'); ?>';
 	var tinyBlockFormats = '<?php echo Settings::get('tinyblockformats'); ?>';
-
 </script>
 
 <!-- Module's CSS / JS files -->
@@ -266,12 +262,11 @@ $c = '?v='.$v;
 <?php if (Settings::get('enable_backend_tracker') == '1') :?>
 	<script type="text/javascript">
 		Ionize.Tracker.initialize({
-			'parent':'desktop',
-			'updateDelay':10000
+			'parent'		: 'desktop',
+			'updateDelay'	: 10000
 		});
 		Ionize.Tracker.startTracking();
 	</script>
 <?php endif; ?>
 </body>
 </html>
-

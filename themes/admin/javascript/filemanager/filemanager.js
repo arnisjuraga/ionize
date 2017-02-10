@@ -212,7 +212,7 @@ var Filemanager = new Class({
 		}
 
 		this.container = new Element('div', {
-			'class': 'filemanager-container' + (Browser.opera ? ' filemanager-engine-presto' : '') + (Browser.ie ? ' filemanager-engine-trident' : '') + (Browser.ie8 ? '4' : '') + (Browser.ie9 ? '5' : ''),
+			'class': 'filemanager-container' + (Browser.name=='opera' ? ' filemanager-engine-presto' : '') + (Browser.name=='ie' ? ' filemanager-engine-trident' : '') + (Browser.name=='ie8' ? '4' : '') + (Browser.name=='ie9' ? '5' : ''),
 			styles: {'z-index': this.options.zIndex }
 		});
 		this.filemanager = new Element('div', {
@@ -225,7 +225,7 @@ var Filemanager = new Class({
 		}).inject(this.container);
 
 		this.header = new Element('div', {
-			'class': 'filemanager-header'
+			'class': 'filemanager-header ' + navigator.platform.toLowerCase()
 		}).inject(this.filemanager);
 
 		this.panel = new Element('div', {'class': 'filemanager-panel'}).inject(this.filemanager);
@@ -338,6 +338,7 @@ var Filemanager = new Class({
 		}
 		if (this.options.download) this.addMenuButton('download', 'download');
 		if (this.options.selectable) this.addMenuButton('open', 'ionize_label_select_file');
+		if (this.options.selectable) this.addMenuButton('open_all', 'ionize_label_select_all_files');
 
 		this.info = new Element('div', {'class': 'filemanager-infos'});
 
@@ -566,7 +567,7 @@ var Filemanager = new Class({
 	loadAssets: function()
 	{
 		Asset.css(this.assetsUrl + 'css/filemanager.css');
-		if (Browser.ie && Browser.version <= 7) {
+		if (Browser.name=='ie' && Browser.version <= 7) {
 			Asset.css(this.assetsUrl +'css/filemanager_ie7.css');
 		}
 	},
@@ -596,7 +597,7 @@ var Filemanager = new Class({
 		var self = this;
 
 		// Overlay
-		this.uploadOverlay = new Element('div', {'class':'filemanager-upload-overlay'}).inject(document.body, 'top');
+		this.uploadOverlay = new Element('div', {'class':'filemanager-upload-overlay'}).inject(this.filemanager, 'top');
 
 		this.uploadOverlay.addEvents({
 			'mouseout': function(e)
@@ -714,7 +715,7 @@ var Filemanager = new Class({
 							{
 								var display_image = true;
 
-								if (Browser.ie && this.fileSize > 10000000)
+								if (Browser.name=='ie' && this.fileSize > 10000000)
 								{
 									display_image = false;
 									this.destroy();
@@ -769,13 +770,15 @@ var Filemanager = new Class({
 			// TODO
 			onItemProgress: function(item, perc)
 			{
-				if( ! item.getElement('.progress')) return;
+				if (item) {
+					if (!item.getElement('.progress')) return;
 
-				item.getElement('.progress').fade('show');
+					item.getElement('.progress').fade('show');
 
-				var dim = 80;
-				item.getElement('.progress-bar').tween('width', Math.round(dim * perc/100));
-				item.getElement('.progress-bar').innerHTML = Math.floor(perc) + '%';
+					var dim = 80;
+					item.getElement('.progress-bar').tween('width', Math.round(dim * perc / 100));
+					item.getElement('.progress-bar').innerHTML = Math.floor(perc) + '%';
+				}
 			},
 			onItemComplete: function(item, file, response)
 			{
@@ -816,7 +819,7 @@ var Filemanager = new Class({
 			},
 			onItemError: function(item, file, response)
 			{
-				self.showError('' + response.error);
+				if (typeOf(response) != 'null' ) self.showError('' + response.error);
 
 				// Remove item from DOM
 				item.fade(0).get('tween').chain(function() {
@@ -1088,7 +1091,7 @@ var Filemanager = new Class({
 	relaySingleOrDoubleClick: function(e, self, dg_el, file, clicks)
 	{
 		// IE7 / IE8 event problem
-		if( ! Browser.ie)
+		if( Browser.name !='ie')
 			if (e) e.stop();
 
 		this.tips.hide();
@@ -1220,7 +1223,7 @@ var Filemanager = new Class({
 		window.removeEvent('scroll', this.bound.scroll).removeEvent('resize', this.bound.scroll);
 		document.removeEvent('keydown', this.bound.keydown);
 		document.removeEvent('keyup', this.bound.keyup);
-		if ((Browser.Engine && (Browser.Engine.trident || Browser.Engine.webkit)) || (Browser.ie || Browser.chrome || Browser.safari))
+		if (Browser.name=='ie' || Browser.name=='chrome' || Browser.name=='safari')
 			document.removeEvent('keydown', this.bound.keyboardInput);
 		else
 			document.removeEvent('keypress', this.bound.keyboardInput);
@@ -1267,6 +1270,26 @@ var Filemanager = new Class({
 		}
 	},
 
+	open_all_on_click: function(e) {
+		var items = $$('.filemanager-browser li.list span');
+		var that = this;
+		items.each(function(fileItem, index){
+			var file = fileItem.retrieve('file');
+			if(file != null && file.name !== '..' && file.mime !== 'text/directory') {
+				that.Current = fileItem.addClass('selected');
+				that.fillInfo(file);
+
+				that.fireEvent('complete', [
+					(that.options.deliverPathAsLegalURL ? file.path : that.escapeRFC3986(that.normalize('/' + that.root + file.path))), // the absolute URL for the selected file, rawURLencoded
+					file,
+					this
+				]);
+
+				fileItem.removeClass('selected');
+			}
+		});
+	},
+	
 	download_on_click: function(e) {
 		e.stop();
 		if (!this.Current) {
@@ -3138,7 +3161,7 @@ var Filemanager = new Class({
 	 */
 	addMenuButton: function(name, translation)
 	{
-		var el = new Element('button', {'class': 'filemanager-' + name + ' button green',	text: Lang.get(translation)}).inject(this.menu, 'top');
+		var el = new Element('a', {'class': 'filemanager-' + name + ' button green',	text: Lang.get(translation)}).inject(this.menu, 'top');
 
 		if (this[name+'_on_click'])
 			el.addEvent('click', this[name+'_on_click'].bind(this));
@@ -3414,7 +3437,7 @@ Filemanager.Dialog = new Class({
 		);
 
 		this.el = new Element('div', {
-			'class': 'filemanager-dialog' + (Browser.ie ? ' filemanager-dialog-engine-trident' : '') + (Browser.ie ? ' filemanager-dialog-engine-trident' : '') + (Browser.ie8 ? '4' : '') + (Browser.ie9 ? '5' : ''),
+			'class': 'filemanager-dialog' + (Browser.name=='ie' ? ' filemanager-dialog-engine-trident' : '') + (Browser.ie ? ' filemanager-dialog-engine-trident' : '') + (Browser.ie8 ? '4' : '') + (Browser.ie9 ? '5' : ''),
 			opacity: 0,
 			tween: {duration: 'short'},
 			styles:
@@ -3614,7 +3637,7 @@ this.Overlay = new Class({
 	},
 
 	hide: function() {
-		if (!Browser.ie) {
+		if (Browser.name!='ie') {
 			this.el.fade(0).get('tween').chain((function() {
 				this.revertObjects();
 				this.el.setStyle('display', 'none');
@@ -3634,7 +3657,7 @@ this.Overlay = new Class({
 			this.destroy();
 		}
 		else {
-			if (!Browser.ie) {
+			if (Browser.name!='ie') {
 				this.el.setStyles({
 					width: document.getScrollWidth(),
 					height: document.getScrollHeight()

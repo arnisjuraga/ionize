@@ -106,18 +106,18 @@ class Element_model extends Base_model
 		$definitions_fields = self::$ci->extend_field_model->get_list($cond, 'extend_field');
 
 		// Get fields instances
-		$sql = "
-			select
+		$sql = '
+			SELECT
 				extend_field.id_extend_field,
 				extend_field.name,
 				extend_field.type,
 				extend_field.description,
 				extend_fields.*
-			from extend_fields
-			join extend_field on extend_field.id_extend_field = extend_fields.id_extend_field
-			where extend_fields.id_parent = ".$id_element."
-			and extend_fields.parent = 'element'
-			order by extend_field.ordering ASC
+			FROM extend_fields
+			JOIN extend_field ON extend_field.id_extend_field = extend_fields.id_extend_field
+			WHERE extend_fields.id_parent = '.$id_element."
+			AND extend_fields.parent = 'element'
+			ORDER BY extend_field.ordering ASC
 		";
 
 		$query = $this->{$this->db_group}->query($sql);
@@ -219,33 +219,35 @@ class Element_model extends Base_model
 
 		// Get fields instances
 		$where = "
-			where extend_fields.id_parent in (
-				select id_element from element
-				where parent= '".$parent."'
-				and id_parent= ".$id_parent."
+			WHERE extend_fields.id_parent IN (
+				SELECT id_element FROM element
+				WHERE parent= '".$parent."'
+				AND id_parent= ".$id_parent."
 			)
-			and extend_fields.parent = 'element'
+			AND extend_fields.parent = 'element'
 		";
 
 		if ($id_element)
-			$where = "
-				where extend_fields.id_parent = ".$id_element."
-				and extend_fields.parent = 'element'
+			$where = '
+				WHERE extend_fields.id_parent = '.$id_element."
+				AND extend_fields.parent = 'element'
 			";
 		
-		$sql = 'select extend_field.*, extend_fields.*
-				from extend_fields
-				join extend_field on extend_field.id_extend_field = extend_fields.id_extend_field'
+		$sql = 'SELECT extend_field.*, extend_fields.*
+				FROM extend_fields
+				JOIN extend_field on extend_field.id_extend_field = extend_fields.id_extend_field'
 				.$where;
 		$query = $this->{$this->db_group}->query($sql);
 
 		$result = array();
+		if ( $query ) {
 		if ( $query->num_rows() > 0)
-			$result = $query->result_array();
-		$query->free_result();
+				$result = $query->result_array();
+			$query->free_result();
+		}
 
 		$langs = Settings::get_languages();
-		$extend_fields_fields = $this->{$this->db_group}->list_fields('extend_fields');
+		$extend_fields_fields = $this->list_fields('extend_fields');
 		
 		foreach($definitions as $key => &$definition)
 		{
@@ -450,7 +452,6 @@ class Element_model extends Base_model
 
 	/**
 	 * @param null $id
-	 *
 	 * @return int
 	 */
 	public function delete($id)
@@ -517,7 +518,7 @@ class Element_model extends Base_model
 		{
 			// Copy all fields
 			$sql = 	"
-				insert into extend_fields
+				INSERT INTO extend_fields
 				 (
 					id_extend_field,
 					parent,
@@ -527,15 +528,15 @@ class Element_model extends Base_model
 					ordering,
 					id_element
 				)
-				select
+				SELECT
 					id_extend_field,
 					'element',
 					".$id_element.",
 					lang,
 					content,
 					ordering
-				from extend_fields
-				where id_element = ".$data['id_element']
+				FROM extend_fields
+				WHERE id_element = ".$data['id_element']
 			;
 
 			$return = $this->{$this->db_group}->query($sql);

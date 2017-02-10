@@ -19,6 +19,14 @@ class Menu extends MY_admin
 	 */
 	protected static $_AUTHORITY_BACKEND_ACTIONS = array();
 
+	/** @var  Menu_model */
+	public $menu_model;
+
+	/** @var  Rule_model */
+	public $rule_model;
+
+	/** @var  Resource_model */
+	public $resource_model;
 
 	/**
 	 * Constructor
@@ -121,15 +129,15 @@ class Menu extends MY_admin
 	 */
 	public function update()
 	{
-		$id = $this->input->post('id_menu');
+		$id_menu = $this->input->post('id_menu');
 
-		if ($id)
+		if ($id_menu)
 		{
-			$this->menu_model->update($id, $this->input->post());
+			$this->menu_model->update($id_menu, $this->input->post());
 
 			if (Authority::can('access', 'admin/menu/permissions/backend'))
 			{
-				$resource = 'backend/menu/' . $id;
+				$resource = 'backend/menu/' . $id_menu;
 				$this->rule_model->save_element_roles_rules($resource, $this->input->post('backend_rule'));
 			}
 		}

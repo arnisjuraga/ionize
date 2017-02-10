@@ -12,6 +12,10 @@
 
 class Tag extends MY_admin
 {
+
+	/** @var  Tag_model */
+	public $tag_model;
+
 	/**
 	 * Constructor
 	 *
@@ -46,13 +50,13 @@ class Tag extends MY_admin
 	 */
 	public function update()
 	{
-		$id = $this->input->post('id_tag');
+		$id_tag = $this->input->post('id_tag');
 		$value = $this->input->post('tag_name');
 		$selector = $this->input->post('selector');
 
 		if ($value != '')
 		{
-			$this->tag_model->update(array('id_tag' => $id), $this->input->post());
+			$this->tag_model->update(array('id_tag' => $id_tag), $this->input->post());
 
 			$this->callback = array
 			(
@@ -98,9 +102,9 @@ class Tag extends MY_admin
 
 	public function delete()
 	{
-		$id = $this->input->post('id');
+		$id_tag = $this->input->post('id');
 
-		$this->tag_model->delete_all($id);
+		$this->tag_model->delete_all($id_tag);
 
 		$this->_reload_tag_panel();
 

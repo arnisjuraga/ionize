@@ -3,6 +3,16 @@
 class Ajaxform extends My_Module
 {
 
+	/** @var MY_Email */
+	public $email;
+
+	/** @var  CI_Form_validation */
+	public $form_validation;
+	
+	/**
+	 * Constructor
+	 *
+	 */
 	public function __construct()
 	{
 		parent::__construct();
@@ -84,7 +94,7 @@ class Ajaxform extends My_Module
 			if ( ! $validation_passed)
 			{
 				$result['title'] = lang('form_alert_error_title');
-				$result['message'] = lang('form_alert_error_message');
+				$result['message'] = lang($form['messages']['error']);
 				$result['errors'] = $this->form_validation->_error_array;
 			}
 			// Validation passed : Process the data
@@ -98,7 +108,7 @@ class Ajaxform extends My_Module
 				if ( ! isset($result['title']) && ! isset($result['message']))
 				{
 					$result['title'] = lang('form_alert_success_title');
-					$result['message'] = lang('form_alert_success_message');
+					$result['message'] = lang($form['messages']['success']);
 				}
 			}
 		}

@@ -118,7 +118,7 @@ class TagManager_Navigation extends TagManager
 			$page['title'] = $page['nav_title'] !='' ? $page['nav_title'] : $page['title'];
 			// Add the active_class key
 			$page['active_class'] = in_array($page['id_page'], $active_pages) ? $active_class : '';
-			$page['is_active'] = in_array($page['id_page'], $active_pages) ? TRUE : FALSE;
+			$page['is_active'] = in_array($page['id_page'], $active_pages);
 			$page['id_navigation'] = $page['id_page'];
 		}
 
@@ -534,7 +534,7 @@ class TagManager_Navigation extends TagManager
 	{
 		$has_url = $tag->getValue('has_url');
 
-		if (intval($has_url) == 1)
+		if ( (int) $has_url === 1)
 			return self::wrap($tag, $tag->getValue('absolute_url'));
 
 		return '#';
@@ -552,7 +552,7 @@ class TagManager_Navigation extends TagManager
 	{
 		$has_url = $tag->getValue('has_url');
 
-		if (intval($has_url) == 1)
+		if ((int) $has_url === 1)
 		{
 			$str = 'href="' . $tag->getValue('absolute_url') . '"';
 
@@ -585,6 +585,9 @@ class TagManager_Navigation extends TagManager
 		// Current active language class
 		$active_class = $tag->getAttribute('active_class', 'active');
 
+		// Ignore current language in output
+		$ignore_current = $tag->getAttribute('ignore_current');
+
 		// helper
 		$helper = $tag->getAttribute('helper');
 
@@ -596,6 +599,10 @@ class TagManager_Navigation extends TagManager
 		{
 			$lang_code = $lang['lang'];
 			$p_data = $page['languages'][$lang_code];
+
+			if ( $ignore_current == TRUE && $lang_code == Settings::get_lang('current'))
+				continue;
+
 
 			// Correct the Home page URL
 			if ($p_data['online'] == 1 OR ($p_data['online'] == 0 && Authority::can('access', 'admin') && Settings::get('display_front_offline_content') == 1))

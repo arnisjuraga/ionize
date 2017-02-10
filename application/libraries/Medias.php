@@ -22,7 +22,11 @@ class Medias
 {
 	protected static $_inited = FALSE;
 
+	/** @var CI_Controller */
 	public static $ci;
+
+	/** @var  MY_Image_lib */
+	public $image_lib;
 
 	/*
 	 * System default "No picture" source file.
@@ -32,7 +36,7 @@ class Medias
 	 */
 	public static $no_picture_source = "no_picture_source_smiley.png";
 
-
+	/** @var array */
 	protected static $allowed_resize_method = array
 	(
 		'square', 		// Square picture
@@ -48,7 +52,6 @@ class Medias
 	 * Allowed methods :
 	 *
 	 * @var string
-	 *
 	 */
 	public static $default_resize_method = 'wider_side';
 
@@ -57,13 +60,14 @@ class Medias
 	 * Default border color for 'border' resize method
 	 *
 	 * @var string
-	 *
 	 */
 	public static $default_border_color = '#555';
 
 	// ------------------------------------------------------------------------
 
-
+	/**
+	 * Constructor
+	 */
 	function __construct()
 	{
 		self::$ci =& get_instance();
@@ -74,12 +78,10 @@ class Medias
 
 
 	/**
-	 * @param array
-	 * @param array
-	 * @param string
-	 *
-	 * @return string
-	 *
+	 * @param	array	$media
+	 * @param	array	$settings
+	 * @param	string	$fail_picture_path
+	 * @return	string
 	 */
 	public function get_src($media, $settings, $fail_picture_path=NULL)
 	{
@@ -219,7 +221,12 @@ class Medias
 
 	// ------------------------------------------------------------------------
 
-
+	/**
+	 * @param	string	$source_path
+	 * @param	string	$dest_path
+	 * @param	array	$settings
+	 * @return	bool
+	 */
 	public function create_thumb($source_path, $dest_path, $settings = array())
 	{
 		self::$ci->load->library('image_lib');
@@ -240,7 +247,7 @@ class Medias
 	
 			if (isset($settings['square']) && $settings['square'] == TRUE )
 			{
-				if ($dim['width'] >= $dim['height']) 
+				if ($dim['width'] >= $dim['height'])
 					$settings['master_dim'] =	$settings_square['master_dim'] = 'height';
 				else 
 					$settings['master_dim'] =	$settings_square['master_dim'] = 'width';
@@ -286,6 +293,8 @@ class Medias
 
 						self::$ci->image_lib->crop();
 					}		
+				} else {
+					return $source_path;
 				}
 			}
 			else
@@ -416,7 +425,7 @@ class Medias
 			case 'width':
 				
 				$ci_settings['width'] = $settings['width'];
-				$ci_settings['height'] = intval($settings['width']  * $dim['height'] / $dim['width']);
+				$ci_settings['height'] = (int) ($settings['width']  * $dim['height'] / $dim['width']);
 				
 				$ci_settings['maintain_ratio'] = FALSE;
 
@@ -430,7 +439,7 @@ class Medias
 			case 'height':
 				
 				$ci_settings['height'] = $settings['height'];
-				$ci_settings['width'] = intval($settings['height']  * $dim['width'] / $dim['height']);
+				$ci_settings['width'] = (int) ($settings['height']  * $dim['width'] / $dim['height']);
 				
 				$ci_settings['maintain_ratio'] = FALSE;
 
@@ -585,8 +594,8 @@ class Medias
 			
 			$next_folder = '';
 			
-			// Check if server os is windows,
-			// If server os is windows, first separator has to be empty string
+			// Check if server OS is windows,
+			// If server OS is windows, first separator has to be empty string
 			// $separator = ((strtoupper(substr(php_uname('s'), 0, 3)) === 'WIN') !== FALSE) ? '' : '/';
             $separator = '/';
 
@@ -633,6 +642,17 @@ class Medias
 			}
 		}
 		return FALSE;
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
+	public function get_base_64($media=array())
+	{
+		$handle = fopen($media['src'], "rb");
+		$data = stream_get_contents($handle);
+		return 'data:' . $media['mime'] . ';base64,' . base64_encode($data);
 	}
 
 
@@ -733,58 +753,103 @@ class Medias
 	 * watermark is file inside 'files' folder, filename: 'watermark.png'
 	 *
 	 */
-	public function embed_watermark($filepath, $watermark_positions)
+	public function embed_watermark( $filepath, $watermark )
 	{
-		self::$ci->load->library('image_lib');
+		self::$ci->load->library( 'image_lib' );
 		
-		$watermark_path = DOCPATH . Settings::get('files_path') . '/watermark.png';
+		// directory and default watermark
+		$files_directory   = DOCPATH . Settings::get('files_path') . '/';
+		$default_watermark = $files_directory . 'watermark.png';
 		
-		if( !file_exists($watermark_path))
-			return;
+		// just get the watermark info from square braces
+		$info = array( );
+		$data = array( );
 		
-		$w = explode(',', $watermark_positions);
+		preg_match_all( '/\[([^\]]+)\]/', $watermark, $info );
 		
-		foreach($w as $p)
+		// are there any matches?
+		$count = isset($info[0])
+			? count($info[0])
+			: 0;
+		
+		// without square braces
+		if( !$count )
 		{
-			$p = trim($p);
-			if(strlen($p) == 2)
+			// ex. "bl,watermark.png" in attribute
+			if( strpos($watermark, ',') )
 			{
-				// vertical position
-				$v = substr($p, 0, 1);
-				
-				// horizontal position
-				$h = substr($p, 1, 1);
-				
-				$vert = 'middle';
-				$hor = 'center';
-				
-				switch($v)
-				{
-					case 't': $vert = 'top'; break;
-					case 'b': $vert = 'bottom'; break;	
-				}
-				
-				switch($h)
-				{
-					case 'l': $hor = 'left'; break;
-					case 'r': $hor = 'right'; break;	
-				}
-				
-				$wconf = array(
-					'wm_type' => 'overlay',
-					'source_image' => $filepath,
-					'quality' => 90,
-					'wm_vrt_alignment' => $vert,
-					'wm_hor_alignment' => $hor,
-					'wm_overlay_path' => $watermark_path
-				);
-
-				self::$ci->image_lib->clear();
-				self::$ci->image_lib->initialize($wconf);
-
-				self::$ci->image_lib->watermark();
+				$line = explode( ',', $watermark );
+				$data = array( array($line[0], $files_directory . $line[1]) );
 			}
-		}	
+			// ex. "bl" in attribute
+			else
+				$data = array( array($watermark, $default_watermark) );
+		}
+		else
+		{
+			// ex. [tl,bl] or only [tl] in attribute
+			if( $count == 1 )
+			{
+				$line = explode( ',', $info[1][0] );
+				
+				foreach( $line as $position )
+					$data[] = array( trim($position), trim($default_watermark) );
+			}
+			// ex. [tl,bl][watermark.png,watermark.png] in attribute
+			// you must declare in this case for each position default watermark!
+			// so, construction [tl,bl][watermark.png] is not allowed
+			else
+			{
+				$position  = explode( ',', $info[1][0] );
+				$watermark = explode( ',', $info[1][1] );
+				
+				if( count($position) != count($watermark) )
+					return;
+				
+				for( $x = 0, $y = count($position); $x < $y; ++$x )
+					$data[] = array( trim($position[$x]), $files_directory . trim($watermark[$x]) );
+			}
+		}
+		
+		// create watermark/watermarks
+		foreach( $data as $watermark )
+		{
+			$vertical = 'middle';
+			$horizontal = 'center';
+			
+			// vertical / horizontal
+			$v = substr( $watermark[0], 0, 1 );
+			$h = substr( $watermark[0], 1, 1 );
+			
+			if( $v == 't' )
+				$vertical = 'top';
+			else if( $v == 'b' )
+				$vertical = 'bottom';
+			
+			if( $h == 'l' )
+				$horizontal = 'left';
+			else if( $h == 'r' )
+				$horizontal = 'right';
+				
+			if( !is_file($watermark[1]) )
+				return;
+				
+			// config... nothing special
+			$config = array
+			(
+				'wm_type' => 'overlay',
+				'source_image' => $filepath,
+				'quality' => 90,
+				'wm_vrt_alignment' => $vertical,
+				'wm_hor_alignment' => $horizontal,
+				'wm_overlay_path' => $watermark[1]
+			);
+			
+			// crate watermark
+			self::$ci->image_lib->clear( );
+			self::$ci->image_lib->initialize( $config );
+			self::$ci->image_lib->watermark( );
+		}
 	}
 
 

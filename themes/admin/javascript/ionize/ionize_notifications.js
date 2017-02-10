@@ -17,7 +17,15 @@ ION.Notifications = new Class({
 		ION.JSON(
 			ION.adminUrl + 'notification/get_ionize_notifications',
 			{},
-			{onSuccess: function(json){self.display(json);}}
+			{
+				onSuccess: function(json)
+				{
+					if (Object.getLength(json) > 0)
+						self.display(json);
+					else
+						new Element('p', {'class':'lite', html:Lang.get('ionize_message_no_network')}).inject(self.container);
+				}
+			}
 		);
 	},
 
@@ -53,7 +61,9 @@ ION.Notifications = new Class({
 
 		ION.JSON(
 			ION.adminUrl + 'notification/get_local_notifications',
-			json,
+			{
+				category: 'Message'
+			},
 			{
 				onSuccess: function(json)
 				{
@@ -61,7 +71,7 @@ ION.Notifications = new Class({
 
 					if (typeOf(json) == 'array' && Object.getLength(json) > 0)
 					{
-						self.notCont = new Element('div').inject(self.container);
+						self.notCont = new Element('div', {'class':'clearfix mt20'}).inject(self.container);
 
 						new ION.TableList({
 							items: json,

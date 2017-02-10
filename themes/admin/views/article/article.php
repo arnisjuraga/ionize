@@ -41,8 +41,11 @@ if ($tracker_title == '')
 
 				<div class="main subtitle">
 					<p>
-						<span class="lite">ID : </span>
-						<?php echo $id_article; ?>
+						<a class="button light" href="javascript:void(0)" onclick="$$('a.title.page<?php echo $id_page; ?>')[0].fireEvent('click');">
+							<span class="tree-img folder open"></span>
+							<span class="lite">ID : </span>
+							<?php echo $id_article; ?>
+						</a>
 
 						<?php if( ! empty($breadcrump)) :?>
 							| <span class="lite"><?php echo lang('ionize_label_article_context_edition'); ?> : </span><?php echo$breadcrump?>
@@ -58,7 +61,7 @@ if ($tracker_title == '')
 				<input type="hidden" name="id_page" id="id_page" value="<?php echo $id_page; ?>" />
 
 				<!-- Where is the article ? -->
-				<dl>
+				<dl class="not-editable">
 					<dt><label><?php echo lang('ionize_label_article_in'); ?></label></dt>
 					<dd class="lite"><?php echo $menu; ?>
 						<?php foreach ($breadcrumbs as $breadcrumb) :?>
@@ -67,13 +70,27 @@ if ($tracker_title == '')
 					</dd>
 				</dl>
 
+
+				<!-- Content Types -->
+				<?php if (isset($content_types)) :?>
+					<dl>
+						<dt>
+							<label for="id_content_type"><?php echo lang('ionize_label_type'); ?></label>
+						</dt>
+						<dd>
+							<?php echo $content_types; ?>
+						</dd>
+					</dl>
+				<?php endif ;?>
+
+
 				<!-- Ordering -->
 				<dl>
-					<dt >
+					<dt>
 						<label for="ordering_select"><?php echo lang('ionize_label_ordering'); ?></label>
 					</dt>
 					<dd>
-						<select name="ordering_select" id="ordering_select" class="select">
+						<select name="ordering_select" id="ordering_select" class="select left ">
 							<?php if($id_article) :?>
 								<option value="<?php echo $ordering; ?>"><?php echo $ordering; ?></option>
 							<?php endif ;?>
@@ -81,12 +98,10 @@ if ($tracker_title == '')
 							<option value="last"><?php echo lang('ionize_label_ordering_last'); ?></option>
 							<option id="ordering_select_after" value="after" <?php if( empty($articles)) :?>style="display:none"<?php endif ;?>><?php echo lang('ionize_label_ordering_after'); ?></option>
 						</select>
-					</dd>
-					<dd>
-						<select name="ordering_after" id="ordering_after" style="display:none;" class="select w140 mt5">
+						<select name="ordering_after"   id="ordering_after" style="display:none;" class="left select w140 ml10">
 							<?php foreach($articles as $article) :?>
 								<?php
-									$title = ($article['title'] != '') ? $article['title'] : $article['name'];
+								$title = ($article['title'] != '') ? $article['title'] : $article['name'];
 								?>
 								<option value="<?php echo $article['id_article']; ?>"><?php echo $title; ?></option>
 							<?php endforeach ;?>
@@ -162,7 +177,7 @@ if ($tracker_title == '')
 
 							<dl>
 								<dt>
-									<label for="online_<?php echo $lang; ?>" title="<?php echo lang('ionize_help_article_content_online'); ?>"><?php echo lang('ionize_label_online_in'); ?> <?php echo ucfirst($language['name']); ?></label>
+									<label for="online_<?php echo $lang; ?>" title="<?php echo lang('ionize_help_article_content_online'); ?>"><?php echo lang('ionize_label_online'); ?></label>
 								</dt>
 								<dd>
 									<input id="online_<?php echo $lang; ?>" <?php if ($languages[$lang]['online'] == 1):?> checked="checked" <?php endif;?> name="online_<?php echo $lang; ?>" class="inputcheckbox" type="checkbox" value="1"/>
@@ -203,6 +218,11 @@ if ($tracker_title == '')
 							</dt>
 							<dd>
 								<input id="url_<?php echo $lang; ?>" name="url_<?php echo $lang; ?>" class="inputtext" type="text" value="<?php echo $languages[$lang]['url']; ?>"/>
+								<?php if ( ! empty($urls[$lang])) :?>
+									<br/>
+									<?php echo lang('ionize_label_full_url'); ?> : <a href="<?php echo $urls[$lang]['url']; ?>" target="_blank" class="selectable"><?php echo $lang; ?>/<?php echo $urls[$lang]['path']; ?></a>
+
+								<?php endif ;?>
 							</dd>
 						</dl>
 
@@ -223,7 +243,8 @@ if ($tracker_title == '')
 		
 					<div class="element-<?php echo $lang; ?> mb40">
 						<div>
-							<textarea id="content_<?php echo $lang; ?>" name="content_<?php echo $lang; ?>" class="tinyTextarea h260" rel="<?php echo $lang; ?>"><?php echo htmlentities($languages[$lang]['content'], ENT_QUOTES, 'utf-8'); ?></textarea>
+							<textarea id="content_<?php echo $lang; ?>" name="content_<?php echo $lang; ?>" class="tinyTextarea h260 w100p" rel="<?php echo $lang; ?>"><?php echo htmlentities($languages[$lang]['content'], ENT_QUOTES, 'utf-8'); ?></textarea>
+							<p class="mt5"><a class="btnToggleEditor block" data-editor="content_<?php echo $lang; ?>">Toggle Editor</a></p>
 						</div>
 					</div>
 
@@ -234,28 +255,20 @@ if ($tracker_title == '')
 
 					<!-- Medias -->
 					<div class="tabcontent">
-
-						<p class="h30">
-							<a id="addMedia" class="fmButton button light right">
-								<i class="icon-pictures"></i><?php echo lang('ionize_label_attach_media'); ?>
-							</a>
-							<a id="btnAddVideoUrl" class="right light button">
-								<i class="icon-video"></i><?php echo lang('ionize_label_add_video'); ?>
-							</a>
-							<a class="left light button" onclick="javascript:mediaManager.loadMediaList();return false;">
-								<i class="icon-refresh"></i><?php echo lang('ionize_label_reload_media_list'); ?>
-							</a>
-							<a class="left light button unlink" onclick="javascript:mediaManager.detachAllMedia();return false;">
-								<i class="icon-unlink"></i><?php echo lang('ionize_label_detach_all'); ?>
-							</a>
-                        </p>
-
-						<div id="mediaContainer" class="sortable-container"></div>
+						<div id="mediaContainer"></div>
 					</div>
 
 				<?php endif;?>
 			</div>
 		</fieldset>
+
+		<?php if ($id_article != '') :?>
+
+			<!-- Modules PlaceHolder -->
+			<?php echo get_modules_addons('article', 'main_bottom'); ?>
+
+		<?php endif ;?>
+
 	</div>
 </form>
 
@@ -280,7 +293,7 @@ if ($tracker_title == '')
 	ION.initDroppable();
 	 
 	// Calendars init
-	ION.initDatepicker('<?php echo Settings::get('date_format') ;?>');
+	// ION.initDatepicker('<?php echo Settings::get('date_format') ;?>');
     ION.initClearField('#articleForm');
 
 
@@ -292,7 +305,17 @@ if ($tracker_title == '')
 			$('main-title').set('text', this.value);
 		});
 	});
-	
+
+	$$('.btnToggleEditor').each(function(btn){
+		btn.addEvent('click', function()
+		{
+			if ($(this.getProperty('data-editor') + '_ifr'))
+				tinyMCE.execCommand("mceRemoveControl",false, this.getProperty('data-editor'));
+			else
+				tinyMCE.execCommand("mceAddControl",false, this.getProperty('data-editor'));
+		});
+	});
+
 	// Auto-generates URL
 	<?php if ($id_article == '') :?>
 		<?php foreach (Settings::get_languages() as $lang) :?>
@@ -300,22 +323,41 @@ if ($tracker_title == '')
 		<?php endforeach ;?>
 	<?php endif; ?>
 
+	var el_ordering_select = $('ordering_select');
+
 	// Article ordering :
 	// - Show / hide article list depending on Ordering select
 	// - Update the article select list after parent change
+
 	if ($('id_page'))
 	{
-		$('ordering_select').addEvent('change', function(e)
+		el_ordering_select.addEvent('change', function()
 		{
-			e.stop();
-			var el = e.target;
-			if (el.value == 'after'){ $('ordering_after').setStyle('display', 'block');}
-			else { $('ordering_after').setStyle('display', 'none');	}
+			$('ordering_after').setStyle('display', (this.value === 'after'	? 'block' : 'none'));
 		});
 	}
 
+	if (el_ordering_select)
+	{
+		var cookieName = 'new-article-order';
+		var order_options = 'first';
+
+		el_ordering_select.addEvent('change', function()
+		{
+			Cookie.write(cookieName, this.value);
+		});
+
+		if (Cookie.read(cookieName))
+		{
+			order_options = Cookie.read(cookieName);
+			el_ordering_select.getElement('[value="'+order_options+'"]').setProperty('selected', 'selected');
+			if (order_options == 'after')
+				el_ordering_select.fireEvent('change');
+		}
+	}
+
 	// Copy Lang data to other languages dynamically
-	ION.initCopyLang('.copyLang', Array('title', 'subtitle', 'url', 'content', 'meta_title'));
+	ION.initCopyLang('.copyLang', ['title', 'subtitle', 'url', 'content', 'meta_title']);
 	
 	// Tabs
 	var articleTab = new TabSwapper({
@@ -334,64 +376,47 @@ if ($tracker_title == '')
 
 	<?php if ( ! empty($id_article)) :?>
 
-		var id_article = '<?php echo $id_article; ?>';
+		var id_article = '<?php echo $id_article; ?>',
+			id_content_type = '<?php echo $id_content_type; ?>';
 
 		// Get Content Elements Tabs & Elements
-		$('desktop').store('tabSwapper', articleTab);
-		ION.getContentElements('article', id_article);
-
-    	// Media Manager & tabs events
-		mediaManager.initParent('article', id_article);
+		// $('desktop').store('tabSwapper', articleTab);
+		// ION.getContentElements('article', id_article);
 
 		<?php if(Authority::can('access', 'admin/article/media')) :?>
-        	mediaManager.loadMediaList();
-		<?php endif ;?>
 
-		// Add Media button
-		$('addMedia').addEvent('click', function(e)
-		{
-			e.stop();
-			mediaManager.initParent('article', id_article);
-			mediaManager.toggleFileManager();
-		});
+			var mediaManager = new IonizeMediaManager({
+				parent :'article',
+				id_parent: id_article,
+				container: 'mediaContainer',
+				tab: 'mediaTab'
+			});
+
+        	mediaManager.loadList();
+
+		<?php endif ;?>
 
 		// Init the staticItemManager
 		staticItemManager.init({
 			'parent': 'article',
 			'id_parent': id_article,
-			'destination': 'articleTab'
+			'parentListContainer': 'articleTab'
 		});
 
 		// Get Static Items
 		staticItemManager.getParentItemList();
 
-		// Add video button
-		<?php if(Authority::can('link', 'admin/page/media')) :?>
-
-			$('btnAddVideoUrl').addEvent('click', function()
-			{
-				ION.dataWindow(
-					'addExternalMedia',
-					'ionize_label_add_video',
-					'media/add_external_media_window',
-					{width:600, height:150},
-					{
-						'parent': 'article',
-						'id_parent': id_article
-					}
-				)
-			});
-
-		<?php endif ;?>
-
-		// Extend Fields
-		extendManager.init({
-			parent: 'article',
-			id_parent: id_article,
-			destination: 'articleTab',
-			destinationTitle: Lang.get('ionize_title_extend_fields')
+		// Content Type Extends
+		var contentTypeManager = new ION.ContentTypeManager({
+			type: 'article',
+			id_parent: id_article
 		});
-		extendManager.getParentInstances();
+
+		contentTypeManager.displayInParent({
+			container:'articleTab',
+			id_content_type: id_content_type
+		});
+
 
 	<?php endif ;?>
 

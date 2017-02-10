@@ -13,6 +13,12 @@
 class Lang extends MY_admin
 {
 
+	/** @var Lang_model */
+	public $lang_model;
+
+	/** @var  Settings_Model */
+	public $settings_model;
+
 	/**
 	 * Constructor
 	 *
@@ -152,9 +158,21 @@ class Lang extends MY_admin
 	 */
 	function clean_tables()
 	{
-		$tables = array('page', 'article', 'media');
-	
-		$deleted_rows = $this->lang_model->clean_lang_tables($tables);
+		//$tables = array('page', 'article', 'media');
+		// Some other content language tables need to be cleaned up too. -- Kochin
+		// Retrieve a list of all content language table names.
+		$tables = $this->lang_model->list_lang_tables();
+		if ($tables != FALSE)
+		{
+			// Remove the postfix _lang.
+			$tables = preg_replace('/_lang$/', '', $tables);
+			log_message('debug', 'Content language tables w/o _lang: '.print_r($tables, TRUE));
+
+			$deleted_rows = $this->lang_model->clean_lang_tables($tables);
+		}
+
+		// Also delete rows belong to unused languages in the setting table. -- Kochin
+		$deleted_rows = $this->settings_model->clean_lang_settings();
 
 		$result = array(
 			'title' => lang('ionize_button_clean_lang_tables'),
@@ -171,7 +189,7 @@ class Lang extends MY_admin
 
 	/**
 	 * Copy one language content to another
-	 * Let the user choose wich content will be copied
+	 * Let the user choose which content will be copied
 	 * 
 	 * @TODO...
 	 * 
@@ -529,10 +547,6 @@ class Lang extends MY_admin
 		$conf .= "// Online languages\n";
 		$conf .= "// Languages set online through Ionize.\n";
 		$conf .= "\$config['online_languages'] = ".dump_variable($online_languages)."\n\n";
-
-		$conf .= "// Set by Router only during language detection\n";
-		$conf .= "\$config['uri_lang_code'] = '';\n";
-		$conf .= "\$config['route_lang_code'] = '';\n\n";
 
 		// files end
 		$conf .= "\n\n";

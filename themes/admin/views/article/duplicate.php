@@ -59,13 +59,13 @@
 	<!-- Order in the new page -->
 	<dl class="small mt20">
 		<dt>
-			<label for="ordering"><?php echo lang('ionize_label_ordering'); ?></label>
+			<label><?php echo lang('ionize_label_ordering'); ?></label>
 		</dt>
 		<dd>
-			<select name="ordering_select" id="ordering_select" class="select">
-				<option value="first"><?php echo lang('ionize_label_ordering_first'); ?></option>
-				<option value="last"><?php echo lang('ionize_label_ordering_last'); ?></option>
-			</select>
+			<label for="ordering_first"><?php echo lang('ionize_label_ordering_first'); ?></label>
+			<input type="radio" name="ordering_select" id="ordering_first" value="first" checked="checked"/>
+			<label for="ordering_last"><?php echo lang('ionize_label_ordering_last'); ?></label>
+			<input type="radio" name="ordering_select" id="ordering_last" value="last"/>
 		</dd>
 	</dl>
 	
@@ -114,7 +114,8 @@
 
 <script type="text/javascript">
 
-	$('dup_id_menu').addEvent('change', function()
+	var el_dup_id_menu = $('dup_id_menu');
+	el_dup_id_menu.addEvent('change', function()
 	{
 		ION.HTML(
 			admin_url + 'page/get_parents_select',
@@ -127,7 +128,7 @@
 			{'update': 'dupArticleParentSelectContainer'}
 		);
 	});
-	$('dup_id_menu').fireEvent('change');
+	el_dup_id_menu.fireEvent('change');
 
 
 </script>

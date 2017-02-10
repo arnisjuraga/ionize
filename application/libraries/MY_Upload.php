@@ -247,7 +247,7 @@ class MY_Upload extends CI_Upload
 			{
 				$this->$key = $config[$key];
 
-				if ($key == 'upload_path')
+				if ($key === 'upload_path')
 					$this->upload_path = $this->normalize($this->document_root . $this->upload_path);
 			}
 		}
@@ -606,7 +606,7 @@ class MY_Upload extends CI_Upload
 
 			foreach($headers_keys2 as $pos => $key2)
 			{
-				if (substr($key2, 2) == $key)
+				if (substr($key2, 2) === $key)
 					return $headers[$pos];
 			}
 
@@ -616,7 +616,7 @@ class MY_Upload extends CI_Upload
 			foreach($headers_keys2 as $pos => $key2)
 			{
 				$key2 = str_replace('-', '_', $key2);
-				if (substr($key2, 0, 2) == 'x_' && substr($key2, 2) == $key)
+				if (substr($key2, 0, 2) === 'x_' && substr($key2, 2) === $key)
 					return $headers[$pos];
 			}
 		}
@@ -814,7 +814,7 @@ class MY_Upload extends CI_Upload
 	 */
 	protected function _prep_filename($filename)
 	{
-		if (strpos($filename, '.') === FALSE OR $this->allowed_extensions == '*')
+		if (strpos($filename, '.') === FALSE OR $this->allowed_extensions === '*')
 		{
 			return $filename;
 		}
@@ -1193,6 +1193,10 @@ class MY_Upload extends CI_Upload
 		$max_upload = $this->convert_size(ini_get('upload_max_filesize'));
 		$max_post = $this->convert_size(ini_get('post_max_size'));
 		$memory_limit = $this->convert_size(ini_get('memory_limit'));
+		if($memory_limit<0)
+		{
+			$memory_limit = max($max_upload, $max_post);
+		}
 		$limit = min($max_upload, $max_post, $memory_limit);
 
 		return $limit;

@@ -2,7 +2,6 @@ ION.append({
 
 	grayPanels:Array('dashboard'),
 
-
 	contentUpdate:function(options)
 	{
 		// @todo :
@@ -13,14 +12,15 @@ ION.append({
 
 		if (typeOf(user) != 'null')
 		{
-			$('mainPanel').removeClass('bg-gray');
+			var elMainPanel = $('mainPanel');
+			elMainPanel.removeClass('bg-gray');
 			if (ION.grayPanels.contains(options.url) == true)
 				$('mainPanel').addClass('bg-gray');
 
-			$('mainPanel').getElements('iframe').each(function(el){el.destroy()});
+			elMainPanel.getElements('iframe').each(function(el){el.destroy()});
 
 			options.method = 'post';
-			options.url = admin_url + ION.cleanUrl(options.url);
+			options.url = ION.adminUrl + ION.cleanUrl(options.url);
 			MUI.Content.update(options);
 		}
 		else
@@ -42,7 +42,8 @@ ION.append({
 	initToolbox: function(toolbox_url, onContentLoaded, data)
 	{
 		// Creates the header toolbox if it doesn't exists
-		if ( ! $('mainPanel_headerToolbox')) {
+		var elMainPanelHeaderToolbox = $('mainPanel_headerToolbox');
+		if ( ! elMainPanelHeaderToolbox) {
 			this.panelHeaderToolboxEl = new Element('div', {
 				'id': 'mainPanel_headerToolbox',
 				'class': 'buttonbar'
@@ -57,7 +58,7 @@ ION.append({
 		
 			MUI.Content.update({
 				element: 'mainPanel_headerToolbox',
-				url: admin_url + 'desktop/get/toolboxes/' + toolbox_url,
+				url: ION.adminUrl + 'desktop/get/toolboxes/' + toolbox_url,
 				method: 'post',
 				data: data,
 				onLoaded: cb
@@ -65,7 +66,7 @@ ION.append({
 		}
 		else
 		{
-			$('mainPanel_headerToolbox').empty();
+			elMainPanelHeaderToolbox.empty();
 
 			if (typeOf(onContentLoaded) == 'function')
 				onContentLoaded($('mainPanel_headerToolbox'));
@@ -112,9 +113,9 @@ ION.append({
 	 */
 	initModuleToolbox: function(module, toolbox_url)
 	{
-
 		// Creates the header toolbox if it doesn't exists
-		if ( ! $('mainPanel_headerToolbox')) {
+		var elMainPanelHeaderToolbox = $('mainPanel_headerToolbox');
+		if ( ! elMainPanelHeaderToolbox) {
 			this.panelHeaderToolboxEl = new Element('div', {
 				'id': 'mainPanel_headerToolbox',
 				'class': 'panel-header-toolbox'
@@ -125,12 +126,12 @@ ION.append({
 		{
 			MUI.Content.update({
 				'element': $('mainPanel_headerToolbox'),
-				'url': admin_url + 'module/' + module + '/' +  module + '/get/admin/toolboxes/' + toolbox_url
+				'url': ION.adminUrl + 'module/' + module + '/' +  module + '/get/admin/toolboxes/' + toolbox_url
 			});
 		}
 		else
 		{
-			$('mainPanel_headerToolbox').empty();
+			elMainPanelHeaderToolbox.empty();
 		}
 	
 	},
@@ -206,7 +207,7 @@ ION.append({
 	initAccordion: function(togglers, elements, openAtStart, cookieName) 
 	{
 		// Hack IE 7 : No Accordion
-		if (Browser.ie == true && Browser.version < 8)
+		if (Browser.name=='ie' == true && Browser.version < 8)
 		{
 			return false;
 		}
@@ -216,7 +217,7 @@ ION.append({
 		if (cookieName)
 			disp = [Cookie.read(cookieName), disp].pick();
 			
-		var acc = new Fx.Accordion(togglers, elements, {
+		return new Fx.Accordion(togglers, elements, {
 			display: disp,
 			opacity: false,
 			alwaysHide: true,
@@ -231,8 +232,6 @@ ION.append({
 			},
 			duration:'short'
 		});
-		
-		return acc;
 	},
 
 	
@@ -334,7 +333,7 @@ ION.append({
 	/**
 	 * Updates multiple elements
 	 *
-	 * @param	array	Array of elements to update. Array('element_id' => 'url_to_call')
+	 * @param	{Array}		elements	Array of elements to update. Array('element_id' => 'url_to_call')
 	 *
 	 */
 	updateElements: function (elements)
@@ -359,15 +358,13 @@ ION.append({
 	 * Updates one / several DOM elements
 	 * based on one HTML Request result
 	 *
-	 * @param	Object	Options
-	 *					'url' : URL of the controller to call
-	 *					'element' : ID, selectors of the DOM element(s) to update
+	 * @param	{Object}	options		'url' : URL of the controller to call, 'element' : ID, selectors of the DOM element(s) to update
 	 *
 	 */
 	updateElement: function (options)
 	{
 		// Cleans URLs
-		options.url = admin_url + ION.cleanUrl(options.url);
+		options.url = ION.adminUrl + ION.cleanUrl(options.url);
 			
 		// If the panel doesn't exists, try to update directly one DomHTMLElement
 		if ( ! MUI.get(options.element) )
@@ -439,31 +436,41 @@ ION.append({
 	 * Originally using the Monkey Physics Datepicker.
 	 * Currently using this one : abidibo / mootools-datepicker
 	 *
-	 * @param	String		PHP Date format
-	 *
+	 * @param	{String}	dateFormat		PHP Date format
+	 * @param	{Object}	options			Optional options object
+	 * 										{
+	 * 											context: '' 				// optional, string of the date picker context
+	 * 											selector: 'class'			// CSS selector to use (without '.')
+	 * 											timePicker: false|true		// display or not the time picker
+	 *										}
 	 */
-	initDatepicker: function(dateFormat, options)
+	initDatepicker: function(dateFormat)
 	{
-		if (ION.datePicker)
+		if (typeOf(ION.datePickers) == 'null')
+			ION.datePickers = {};
+
+		var options = typeOf(arguments[1]) == 'null' ? {} : arguments[1],
+			context = typeOf(options.context) == 'null' ? 'global' : options.context,
+			selector = typeOf(options.selector) == 'null' ? 'date' : options.selector;
+
+		if (ION.datePickers[context])
 		{
-			ION.datePicker.close();
+			ION.datePickers[context].close();
 		}
 		else
 		{
-		if (typeOf(dateFormat) == 'null') dateFormat = '%d.%m.%Y';
+			if (typeOf(dateFormat) == 'null') dateFormat = '%Y.%m.%d';
 			var date_format = (dateFormat).replace(/%/g, '');
 
-			if (typeOf(options) == 'null') options = {};
+			var timePicker = (options.timePicker) ? options.timePicker : false;
+			var format = (timePicker == true) ? date_format + ' H:i:s' : date_format;
+			var inputOutputFormat = (timePicker == true) ? 'Y-m-d H:i:s' : 'Y-m-d';
 
-			var oTimePicker = (options.timePicker) ? options.timePicker : false;
-			var oInputFormat = (oTimePicker == true) ? date_format + ' H:i:s' : date_format;
-			var oOutputFormat = (oTimePicker == true) ? 'Y-m-d H:i:s' : 'Y-m-d';
-
-			ION.datePicker = new DatePicker('input.date', {
+			ION.datePickers[context] = new DatePicker('input.' + selector, {
 				pickerClass: 'datepicker_dashboard', 
-				timePicker: oTimePicker,
-				format: oInputFormat,
-				inputOutputFormat: oOutputFormat,
+				timePicker: timePicker,
+				format: format,
+				inputOutputFormat: inputOutputFormat,
 				allowEmpty:true, 
 				useFadeInOut:false
 			//	positionOffset: {x:-60,y:0},
@@ -476,7 +483,7 @@ ION.append({
 			});
 		}
 
-		ION.datePicker.attach($$('.date'));
+		ION.datePickers[context].attach($$('.' + selector));
 	},
 	
 	
@@ -507,15 +514,16 @@ ION.append({
 		{
 			item.addEvent('click', function(e)
 			{
+				var div;
 				if (document.selection)
 				{
-					var div = document.body.createTextRange();
+					div = document.body.createTextRange();
 					div.moveToElementText(item);
 					div.select();
 				}
 				else
 				{
-					var div = document.createRange();
+					div = document.createRange();
 					div.setStartBefore(item);
 					div.setEndAfter(item) ;
 					window.getSelection().addRange(div);
@@ -579,9 +587,10 @@ ION.append({
 	
 	/**
 	 * Init the dynamic title update
-	 * @param	string	Input source ID
-	 * @param	string	HTML Dom Element destination ID
-	 * @param	string	Lang code
+	 *
+	 * @param	{String}	source		Input source ID
+	 * @param	{String}	dest 		HTML Dom Element destination ID
+	 * @param	{String}	lang 		Lang code
 	 *
 	 */
 	initTitleUpdate: function(source, dest, lang)
@@ -618,8 +627,12 @@ ION.append({
 	{
 		if (src && dest)
 		{
-			if (typeOf(src) == 'string') {src = $(src)};
-			if (typeOf(dest) == 'string') {dest = $(dest)};
+			if (typeOf(src) == 'string') {
+				src = $(src);
+			}
+			if (typeOf(dest) == 'string') {
+				dest = $(dest);
+			}
 			
 			dest.set('html', src.value);
 		}
@@ -644,9 +657,10 @@ ION.append({
 	/**
 	 * Adds drag'n'drop functionnality to one element
 	 *
-	 * @param	HTML Dom Element	Element to add the drag on.
-	 * @param	String				CSS classes which can drop the element, comma separated names.
-	 * @param	String				Callback function(s), comma separated names.
+	 * @param	{Element} 	el 				Dom Element	Element to add the drag on.
+	 * @param	{String}	droppables		CSS classes which can drop the element, comma separated names.
+	 * @param	{String}	dropCallbacks	Callback function(s), comma separated names.
+	 * @param	{Object}	options			Drag'n'drop options
 	 *
 	 * @usage
 	 * 			ION.addDragDrop (item, '.dropcreators', 
@@ -658,6 +672,8 @@ ION.append({
 	 */
 	addDragDrop: function(el, droppables, dropCallbacks)
 	{
+		var options = typeOf(arguments[3]) != 'null' ? arguments[3] : {};
+
 		el.makeCloneDraggable(
 		{
 			droppables: droppables,
@@ -673,10 +689,43 @@ ION.append({
 				el.addClass('move');
 				if (typeOf(MUI.Windows.highestZindex) != 'null')
 					el.setStyle('z-index', (MUI.Windows.highestZindex).toInt() + 1);
+
+				// ION.register('dragElement', el);
+				el.setProperty('dropClass', droppables.replace('.', ''));
+
+				if (options.onSnap)
+					options.onSnap(el, event);
+
+				// Register the dragged Element : No other way to get the dragged element
+				// when pseudo collision between a DOM element and a SVG parent node
+				// ION.register('dragElement', el);
+
+				/*
+				console.log(event.event);
+
+				el.addEventListener('dragstart', function (event)
+				{
+					console.log('drag start');
+
+					// Makes HTML draggable active on Firefox
+					event.dataTransfer.setData('draggable', true);
+
+				});
+				*/
 			},
 			
 			onDrag: function(element, event)
 			{
+//				var evt = new CustomEvent('dragstart', event.event);
+//				element.dispatchEvent(evt);
+
+				//element.fireEvent('dragstart');
+
+				// element.fireEvent('drag');
+				// var event = new CustomEvent('drag', event.event);
+				// element.dispatchEvent(evt);
+				// element.fireEvent('drag', event.event);
+
 				if (event.shift) { element.addClass('plus'); }
 				else { element.removeClass('plus'); }
 			},
@@ -729,7 +778,7 @@ ION.append({
 									}
 								});
 							}
-							else
+							else if(dropCB)
 							{
 								if (dropCB.contains(',') && this.dropClasses.length > 1)
 								{
@@ -758,6 +807,8 @@ ION.append({
 							}
 						}
 					}
+
+					droppable.fireEvent('onDrop', [element, droppable, event]);
 					
 					droppable.removeClass('onenter');
 				}
@@ -806,43 +857,70 @@ ION.append({
 			});
 		});
 	},
-	
+
+	/**
+	 * @param	{String}	selector	element or sizzle path
+	 */
 	initClearField: function(selector)
 	{
-		$$(selector + ' .clearfield').each(function(item, idx)
-		{
-			if(item.hasClass('date'))
-			{
-				var dataInput = $(item.getAttribute('data-id'));
-				var visibleInput = dataInput.getPrevious('input');
+		selector = typeOf(selector) == 'string' ? $(selector) : selector;
 
-				item.addEvent('click', function(e) {
-					e.stop();
-					visibleInput.value = '';
-					dataInput.value = '';
-				});
-			}
-			else
+		if (selector)
+		{
+			var elements = selector.getElements('.clearfield');
+
+			elements.each(function(item)
 			{
-				item.addEvent('click', function(e) {
-					e.stop();
-					ION.clearField(item.getAttribute('data-id'));
-				});
-			}
-		});
+				if(
+					item.hasClass('date')
+					|| item.hasClass('date-extend')
+					|| item.hasClass('datetime-extend')
+				)
+				{
+					var dataInput = $(item.getAttribute('data-id'));
+
+					if (dataInput)
+					{
+						var visibleInput = dataInput.getPrevious('input');
+
+						item.addEvent('click', function(e)
+						{
+							e.stop();
+							if (visibleInput) visibleInput.value = '';
+							dataInput.value = '';
+						});
+					}
+					else
+					{
+						console.log('ION.initClearField() ERROR : Please set the "data-id" property of the date field : ');
+						console.log(item);
+					}
+				}
+				else
+				{
+					item.addEvent('click', function(e) {
+						e.stop();
+						ION.clearField(item.getAttribute('data-id'));
+					});
+				}
+			});
+
+		}
 	},
 	
 
 	initAutocompleter: function(input, options)
 	{
-		var searchUrl = ION.cleanUrl(options.searchUrl);
-		var detailUrl = ION.cleanUrl(options.detailUrl);
-		var item_id = options.item_id;
-		
-		var update = options.update;
-		var zIndex = (typeOf(options.zIndex != 'null')) ? options.zIndex : 100;
-		
-		new Autocompleter.Request.HTML($(input), admin_url + searchUrl, 
+		var searchUrl = ION.cleanUrl(options.searchUrl),
+			detailUrl = typeOf(options.detailUrl) != 'null' ? ION.cleanUrl(options.detailUrl) : null,
+			item_id = options.item_id,
+			update = options.update,
+			zIndex = (typeOf(options.zIndex != 'null')) ? options.zIndex : 100,
+			listKeys = typeOf(options.listKeys) == 'array' ? options.listKeys : null,
+			inputKeys = typeOf(options.inputKeys) == 'array' ? options.inputKeys : null
+		;
+
+		new Autocompleter.Request.HTML($(input), ION.adminUrl + searchUrl,
 		{
 			'postVar': 'search',
 			'indicatorClass': 'autocompleter-loading',
@@ -850,7 +928,9 @@ ION.append({
 		    maxChoices: 20,
 		    zIndex: zIndex,
 		    relative: true,
-//			'selectMode': 'type-ahead',
+			selectMode : options.selectMode ? options.selectMode : false,
+			width: typeOf(options.width) != 'null' ? options.width : 'inherit',
+
 		    'injectChoice': function(choice)
 		    {
 				// choice is one <li> element
@@ -860,7 +940,7 @@ ION.append({
 				var value = text.innerHTML;
 				
 				// inputValue saves value of the element for later selection
-				choice.inputValue = value;
+				choice.inputValue = choice.getProperty('data-display');
 				
 				// overrides the html with the marked query value (wrapped in a <span>)
 				text.set('html', this.markQueryValue(value));
@@ -868,16 +948,25 @@ ION.append({
 				// add the mouse events to the <li> element
 				this.addChoiceEvents(choice);
 			},
+
 			onSelection: function(selection, item, value, input)
 			{
 				var id = item.getProperty('data-id');
-				
-				if ($(update))
+
+				if (options.onSelection)
 				{
-					ION.HTML(admin_url + detailUrl, {item_id:id}, {'update':$(update)});
+					options.onSelection(selection, item, value, input);
+				}
+				else
+				{
+					if ($(update))
+					{
+						ION.HTML(ION.adminUrl + detailUrl, {item_id:id}, {'update':$(update)});
+					}
 				}
 			}
 		});
+
 	},
 	
 	/**
@@ -897,7 +986,7 @@ ION.append({
 
 		var r = new Request.JSON(
 		{
-			url: admin_url + 'element_definition/get_definitions_from_parent', 
+			url: ION.adminUrl + 'element_definition/get_definitions_from_parent',
 			method: 'post',
 			loadMethod: 'xhr',
 			data:
@@ -921,7 +1010,7 @@ ION.append({
 					if (found == false)
 					{
 						// Tab
-						var title = (item.title != '') ? item.title : item.name;
+						var title = (item.title != '' && typeOf(item.title) != 'null') ? item.title : item.name;
 						var a = new Element('a').set('html', title);
 						var li = new Element('li', {'id':'tab' + id, 'class': 'tab' + id}).adopt(a);
 						li.inject(ul, 'bottom');
@@ -953,7 +1042,8 @@ ION.append({
 	/**
 	 * Adds the number of medias to the corresponding tab
 	 *
-	 *
+	 * @param	{String}	id_tab
+	 * @param	{String}	id_container
 	 */
 	updateTabNumber: function(id_tab, id_container)
 	{
@@ -966,16 +1056,11 @@ ION.append({
 			if (tab.getElement('span')) tab.getElement('span').dispose();
 			
 			var ul = $(id_container).getElement('ul');
-			
-			if (typeOf(ul) != 'null')
-			{
-				nb = (ul.getChildren('li')).length;		
-			}
-			else
-			{
-				nb = ($(id_container).getChildren()).length;
-			}
-			
+
+			nb = (typeOf(ul) != 'null')
+				? (ul.getChildren('li')).length
+				: ($(id_container).getChildren()).length;
+
 			if (nb > 0)
 			{
 				tab.adopt(new Element('span', {'class':'tab-detail'}).set('html',nb));
@@ -989,6 +1074,7 @@ ION.append({
 	 * Called after a delete by the controller if the element definition
 	 * has no more element for this parent.
 	 *
+	 * @param	{String}	id
 	 */
 	deleteTab: function(id)
 	{
@@ -1014,24 +1100,6 @@ ION.append({
 	},
 	
 	
-	updateTabs: function()
-	{
-		var tabSwapper = $('desktop').retrieve('tabSwapper');
-			
-		if (tabSwapper)
-		{
-			var tabs = tabSwapper.tabs;
-			
-			tabs.each(function(tab, idx)
-			{
-				var section = tab.retrieve('section');
-//				console.log(idx);
-//				console.log(section.getChildren());
-			});
-		}
-	},
-	
-	
 	/**
 	 * Updates all the content elements from a given parent
 	 *
@@ -1048,9 +1116,7 @@ ION.append({
 		}
 	},
 	
-	
-	
-	
+
 	/**
 	 * Updates the info about the link
 	 *
@@ -1068,7 +1134,7 @@ ION.append({
 		// Link build
 		if (type != '')
 		{
-			var url = admin_url + type + '/edit/' + id;
+			var url = ION.adminUrl + type + '/edit/' + id;
 			
 			var a = new Element('a').set('html', text);
 		
@@ -1190,7 +1256,7 @@ ION.append({
 				ION.contentUpdate({
 					element: $('mainPanel'),
 					title: Lang.get('ionize_title_menu'),
-					url : admin_url + 'menu'
+					url : ION.adminUrl + 'menu'
 				});
 			});
 		}
@@ -1204,7 +1270,7 @@ ION.append({
 
 				ION.contentUpdate({
 					'element': $('mainPanel'),
-					'url': admin_url + 'page/create/' + id_menu,
+					'url': ION.adminUrl + 'page/create/' + id_menu,
 					title: Lang.get('ionize_title_new_page')
 				});
 
@@ -1216,7 +1282,7 @@ ION.append({
 					element: $('mainPanel'),
 					title: Lang.get('ionize_title_new_page'),
 					loadMethod: 'xhr',
-					url: admin_url + 'page/create/' + id_menu
+					url: ION.adminUrl + 'page/create/' + id_menu
 				});
 */
 			});
@@ -1235,15 +1301,16 @@ ION.append({
 		
 		for (var i=0; i< order.length; i++)
 		{
+			var el;
 			if (articleContainer)
 			{
-				var el = articleContainer.getElement('li.article' + args.id_page + 'x' + order[i]);
+				el = articleContainer.getElement('li.article' + args.id_page + 'x' + order[i]);
 				el.inject(articleContainer, 'top');
 			}
 			
 			if (typeOf(articleList) != 'null')
 			{
-				var el = articleList.getElement('li.article' + args.id_page + 'x' + order[i]);
+				el = articleList.getElement('li.article' + args.id_page + 'x' + order[i]);
 				el.inject(articleList, 'top');
 			}
 		}
@@ -1252,10 +1319,11 @@ ION.append({
 	
 	/**
 	 * Links one article to a page
-	 * @param	int		ID of the article
-	 * @param	int		ID of the page to add as parent
-	 * @param	int		ID of the original page. 0 if no one.
-	 * @param	Event	Event object.
+	 *
+	 * @param	{Number}	id_article		ID of the article
+	 * @param	{Number}	id_page			ID of the page to add as parent
+	 * @param	{Number}	id_page_origin	ID of the original page. 0 if no one.
+	 * @param	{Event}		event			Event object.
 	 *
 	 */
 	linkArticleToPage: function(id_article, id_page, id_page_origin, event)
@@ -1317,12 +1385,14 @@ ION.append({
 	 * Reloads the page's articles list
 	 * called by ION.linkArticleToPage()
 	 *
+	 * @param	{String}	id_page
 	 */
 	reloadPageArticleList: function(id_page)
 	{
-		if (typeOf($('id_page')) != 'null' && $('id_page').value == id_page)
+		var elIdPage = $('id_page');
+		if (typeOf(elIdPage) != 'null' && elIdPage.value == id_page)
 		{
-			ION.HTML(admin_url + 'article/get_list', {'id_page':id_page}, {'update': 'articleListContainer'});
+			ION.HTML(ION.adminUrl + 'article/get_list', {'id_page':id_page}, {'update': 'articleListContainer'});
 		}
 	},
 
@@ -1337,15 +1407,15 @@ ION.append({
 		var id_page = rel[0];
 		var id_article = rel[1];
 
-		var unlink_url = admin_url + 'article/unlink/' + id_page + '/' + id_article;
+		var unlink_url = ION.adminUrl + 'article/unlink/' + id_page + '/' + id_article;
 
 		// Event on page name anchor
 		var a = item.getElement('a.page');
 		a.addEvent('click', function(e) {
 			e.stop();
 			ION.splitPanel({
-				'urlMain': admin_url + 'page/edit/' + id_page,
-				'urlOptions' : admin_url + 'page/get_options/' + id_page,
+				'urlMain': ION.adminUrl + 'page/edit/' + id_page,
+				'urlOptions' : ION.adminUrl + 'page/get_options/' + id_page,
 				'title': Lang.get('ionize_title_edit_page')
 			});
 		});
@@ -1365,31 +1435,30 @@ ION.append({
 			item.addEvent('click', function()
 			{
 				var lang = item.getProperty('rel');
-				var langs = Lang.languages;
 
 				if (typeOf(tinyMCE) != 'null')
 					tinyMCE.triggerSave();
 
-				elements.each(function(item, idx)
+				elements.each(function(item)
 				{
-					langs.each(function(l)
+					Object.each(Lang.languages, function(label, key)
 					{
-						if (l != lang)
+						if (key != lang)
 						{
-							if (typeOf($(item + '_' + l)) != 'null')
+							if (typeOf($(item + '_' + key)) != 'null')
 							{
 								if (
-									($(item + '_' + l).hasClass('tinyTextarea') ||  $(item + '_' + l).hasClass('smallTinyTextarea'))
+									($(item + '_' + lang).hasClass('tinyTextarea') ||  $(item + '_' + lang).hasClass('smallTinyTextarea'))
 									&& (typeOf(tinyMCE) != 'null')
 								)
 								{
-									var tiny = tinyMCE.EditorManager.get(item + '_' + l);
+									var tiny = tinyMCE.EditorManager.get(item + '_' + lang);
 									if (tiny)
 										tiny.setContent($(item + '_' + lang).value);
 								}
 								else
 								{
-									$(item + '_' + l).value = $(item + '_' + lang).value;
+									$(item + '_' + lang).value = $(item + '_' + lang).value;
 								}
 							}
 						}
@@ -1397,7 +1466,6 @@ ION.append({
 				});
 				
 				ION.notification('success', Lang.get('ionize_message_article_lang_copied'));
-				// item.getParent().highlight();
 			});
 		})
 	},
@@ -1407,11 +1475,10 @@ ION.append({
 	 * Link an Element to a parent
 	 * Called by ION.dropContentElementInPage(), ION.dropContentElementInArticle()
 	 *
-	 * @param	String			Parent type. Can be 'article', 'page', etc.
-	 * @param	DOM Element		The copied / moved element
-	 * @param	DOM Element		DOM target
-	 * @param	Event			Event
-	 *
+	 * @param	{String}	parent		Parent type. Can be 'article', 'page', etc.
+	 * @param	{Element}	element 	The copied / moved element
+	 * @param	{Element}	droppable	DOM target
+	 * @param	{Event}		event		Event
 	 */
 	dropContentElement: function(parent, element, droppable, event)
 	{
@@ -1448,6 +1515,9 @@ ION.append({
 	 * Drop one Content Element in a page (in the tree)
 	 * Copy / Move depending on the SHIFT key
 	 *
+	 * @param	{Element}	element
+	 * @param	{Element}	droppable
+	 * @param	{Event}		event
 	 */
 	dropContentElementInPage: function(element, droppable, event)
 	{
@@ -1459,6 +1529,9 @@ ION.append({
 	 * Drop one Content Element in an article (in the tree)
 	 * Copy / Move depending on the SHIFT key
 	 *
+	 * @param	{Element}	element
+	 * @param	{Element}	droppable
+	 * @param	{Event}		event
 	 */
 	dropContentElementInArticle: function(element, droppable, event)
 	{
@@ -1470,6 +1543,9 @@ ION.append({
 	/**
 	 * Drops an article into a page (from tree to page)
 	 *
+	 * @param	{Element}	element
+	 * @param	{Element}	droppable
+	 * @param	{Event}		event
 	 */
 	dropArticleInPage: function(element, droppable, event)
 	{
@@ -1485,6 +1561,9 @@ ION.append({
 	/**
 	 * Drops a page into an article (from tree to article's parents)
 	 *
+	 * @param	{Element}	element
+	 * @param	{Element}	droppable
+	 * @param	{Event}		event
 	 */
 	dropPageInArticle: function(element, droppable, event)
 	{
@@ -1494,6 +1573,11 @@ ION.append({
 	},
 
 
+	/**
+	 * @param	{String}	link_type
+	 * @param	{Element}	element
+	 * @param	{Element}	droppable
+	 */
 	dropElementAsLink: function(link_type, element, droppable)
 	{
 		// Target link rel
@@ -1510,7 +1594,7 @@ ION.append({
 		else
 		{
 			ION.JSON(
-				admin_url + receiver_type + '/add_link',
+				ION.adminUrl + receiver_type + '/add_link',
 				{
 					'link_rel': link_rel,
 					'receiver_rel': $('rel').value,
@@ -1524,7 +1608,9 @@ ION.append({
 	/**
 	 * Drops one article as link for another article / page
 	 *
-	 *
+	 * @param	{Element}	element
+	 * @param	{Element}	droppable
+	 * @param	{Event}		event
 	 */
 	dropArticleAsLink: function(element, droppable, event)
 	{
@@ -1535,7 +1621,9 @@ ION.append({
 	/**
 	 * Drops one page as link for another article / page
 	 *
-	 *
+	 * @param	{Element}	element
+	 * @param	{Element}	droppable
+	 * @param	{Event}		event
 	 */
 	dropPageAsLink: function(element, droppable, event)
 	{
@@ -1626,18 +1714,18 @@ ION.append({
 	cleanUrl: function(url)
 	{
 		// Cleans URLs
-		url = url.replace(admin_url, '');
+		url = url.replace(ION.adminUrl, '');
 
 		// Be sure the admin url without lang is also removed
-		var admin_uri = Settings.get('admin_url');
-		if (admin_uri)
-			url = url.replace(base_url + admin_uri + '/', '');
+//		var admin_uri = Settings.get('admin_url');
+//		if (admin_uri)
+//			url = url.replace(ION.baseUrl + admin_uri + '/', '');
 
 		// Base URL contains the lang code. Try to clean without the lang code
-		url = url.replace(admin_url.replace(Lang.current + '/', ''), '');
+		url = url.replace(ION.adminUrl.replace(Lang.current + '/', ''), '');
 
-		url = url.replace(base_url + Lang.current + '/', '');
-		url = url.replace(base_url, '');
+		url = url.replace(ION.baseUrl + Lang.current + '/', '');
+		url = url.replace(ION.baseUrl, '');
 
 		return url;
 	},
@@ -1652,8 +1740,8 @@ ION.append({
 		var sep = arguments[2];
 		if ( ! sep) sep = '-';
 
-		var src = $(src);
-		var target = $(target);
+		src = $(src);
+		target = $(target);
 		
 		if (src && target)
 		{
@@ -1675,7 +1763,7 @@ ION.append({
 		var sep = arguments[1];
 		if ( ! sep) sep = '-';
 
-		var text = text.toLowerCase();
+		text = text.toLowerCase();
 
 		/*
 		text = text.replace(/ /g, '-');
@@ -1774,17 +1862,23 @@ ION.append({
 			"Ё":"YO","Й":"I","Ц":"TS","У":"U","К":"K","Е":"E","Н":"N","Г":"G","Ш":"SH","Щ":"SCH","З":"Z","Х":"H","Ъ":"'","ё":"yo","й":"i","ц":"ts","у":"u","к":"k","е":"e","н":"n","г":"g","ш":"sh","щ":"sch","з":"z","х":"h","ъ":"'","Ф":"F","Ы":"I","В":"V","А":"a","П":"P","Р":"R","О":"O","Л":"L","Д":"D","Ж":"ZH","Э":"E","ф":"f","ы":"i","в":"v","а":"a","п":"p","р":"r","о":"o","л":"l","д":"d","ж":"zh","э":"e","Я":"Ya","Ч":"CH","С":"S","М":"M","И":"I","Т":"T","Ь":"'","Б":"B","Ю":"YU","я":"ya","ч":"ch","с":"s","м":"m","и":"i","т":"t","ь":"'","б":"b","ю":"yu",
 
 			// Hungarian
-			"á":"a","í":"i","ó":"o","ő":"o","ú":"u","ű":"u"
+			"á":"a","í":"i","ó":"o","ő":"o","ú":"u","ű":"u",
+
+			// Polish letters (in Latin Extended)
+			"ą":"a","ć":"c","ę":"e","ł":"l","ń":"n","ó":"o","ś":"s","ż":"z","ź":"z","Ą":"A","Ć":"C","Ę":"E","Ł":"L","Ń":"N","Ó":"O","Ś":"S","Ż":"Z","Ź":"Z"
 		};
 
-			text = text.split('').map(function (char) {
-				return a[char] || char;
-			}).join("");
+		if (sep == '-')	a['_'] = sep;
+		if (sep == '_')	a['-'] = sep;
+
+		text = text.split('').map(function (char) {
+			return a[char] || char;
+		}).join("");
 
 		for (var i=0; i<text.length; i++)
 		{
 			var c = text.charCodeAt(i);
-			if (c==45 || c==95 || (c>47 && c<58) || (c>96 && c<123) )
+			if (c==45 || c==95 || (c>44 && c<58) || (c>96 && c<123) )
 			{
 				str = str + text.charAt(i);
 			}

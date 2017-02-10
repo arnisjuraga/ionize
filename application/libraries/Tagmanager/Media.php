@@ -49,8 +49,11 @@ class TagManager_Media extends TagManager
 		'medias:description' => 'tag_simple_value',
 		'medias:copyright' => 	'tag_simple_value',
 		'medias:extension' => 	'tag_simple_value',
+		'medias:type' => 		'tag_simple_value',
 		'medias:provider' => 	'tag_simple_value',
 		'medias:mime' => 		'tag_simple_value',
+		
+		'media:download'	=> 'tag_media_download',
 	);
 
 
@@ -165,7 +168,7 @@ class TagManager_Media extends TagManager
 					$tmp_medias = $filtered_medias;
 					$filtered_medias = array();
 
-					if ($provider == 'all')
+					if ($provider === 'all')
 					{
 						foreach($tmp_medias as $media)
 						{
@@ -241,16 +244,8 @@ class TagManager_Media extends TagManager
 	public static function get_medias(FTL_Binding $tag)
 	{
 		self::load_model('media_model');
-
 		// Pagination ?
 		// $tag_pagination = $tag->getAttribute('pagination');
-
-		/*
-		$parent = $tag->getDataParent();
-		$parent_data = $parent->getData();
-		$parent_name = $tag->getDataParentName();
-
-		*/
 
 		// Type filter, limit, SQL filter
 		$type = $tag->getAttribute('type');
@@ -282,7 +277,6 @@ class TagManager_Media extends TagManager
 				$where['type'] = $type;
 			}
 		}
-		// if ( ! is_null($type)) $where['type'] = 'picture';
 
 		if ( $limit ) $where['limit'] = $limit;
 
@@ -391,9 +385,9 @@ class TagManager_Media extends TagManager
 				if ($media['provider'] !='')
 					$src = $media['path'];
 				else
-				$src = base_url() . $media['path'];
+					$src = base_url() . $media['path'];
 
-				if ($media['type'] == 'picture')
+				if ($media['type'] === 'picture')
 				{
 					$settings = self::get_src_settings($tag);
 
@@ -437,19 +431,31 @@ class TagManager_Media extends TagManager
 	public static function tag_media_src(FTL_Binding $tag)
 	{
 		$media = $tag->get('media');
+		$base_64 = $tag->getAttribute('base_64');
+		$src = '';
 
 		if ( ! empty($media))
 		{
-			if ($media['type'] == 'picture')
+			if ($media['type'] === 'picture')
 			{
 				$settings = self::get_src_settings($tag);
 
 				if (empty($settings['size']))
-					return base_url() . $media['path'];
+				{
+					$src = base_url() . $media['path'];
+				}
+				else
+				{
+					self::$ci->load->library('medias');
+					$src = self::$ci->medias->get_src($media, $settings, Settings::get('no_source_picture'));
+				}
 
-				self::$ci->load->library('medias');
-				
-				return self::$ci->medias->get_src($media, $settings, Settings::get('no_source_picture'));
+				if ( ! is_null($base_64))
+				{
+					$src = self::$ci->medias->get_base_64($media);
+				}
+
+				return $src;
 			}
 
 			if ($media['provider'] !='')
@@ -507,6 +513,72 @@ class TagManager_Media extends TagManager
 			}
 		}
 		return '';
+	}
+	
+	
+	// ------------------------------------------------------------------------
+
+
+	/**
+	 * Renders a link (or other HTML tag, eg. button) for downloading a file (the download file must be added as media to the article)
+	 *
+	 * @usage	<ion:media:download class="download" />
+	 * @usage	<ion:media:download tag_name="button" class="download" />
+	 * @usage	<ion:media:download label="Download Now" tag_name="button" class="download" />
+	 *
+	 * @param FTL_Binding $tag
+	 * @return string
+	 */
+	public function tag_media_download(FTL_Binding $tag)
+	{
+		// get media attributes
+		$media = $tag->locals->media;
+		$mediaTitle = empty($media['title']) ? $media['file_name'] : $media['title'];
+
+		if( empty($mediaTitle) && array_key_exists('content', $media)) {
+			// Fallback to get media attached e.g. to content element
+			self::load_model('media_model');
+
+			$where	= array('id_media' => (int) $media['content']);
+			$medias = self::$ci->media_model->get_lang_list( $where, Settings::get_lang() );
+
+			$fileInfo = array_shift($medias);
+			$mediaTitle	= $fileInfo['file_name'];
+
+			$media['id_media']	= $fileInfo['id_media'];
+		}
+
+		// get CSS classname (optional)
+		$class = trim($tag->getAttribute('class'));
+
+		// get link text (optional, default: filename)
+		$label = trim($tag->getAttribute('label'));
+		if( empty($label) ) {
+			$label = $mediaTitle;
+		}
+
+		// get HTML tag (optional, default: <a>)
+		$tagName = $tag->getAttribute('tag_name');
+		if( empty($tagName) ) {
+			$tagName = 'a';
+		}
+
+		// generate SHA-1 hash to verify valid (= intentionally public) downloads
+		$hash = urlencode( sha1( $media['id_media'] . config_item('encryption_key') ) );
+
+		// render output
+		$url = base_url() . 'media/download/' . $media['id_media'] . '/' . $hash;
+
+		// prepare attributes output
+		$attributeClass = empty($class)
+			? ''
+			: ' class="' . $class . '"';
+
+		$href = $tagName === 'a'
+			? 'href="' . $url . '"'
+			: 'onclick="document.location.href=\'' . $url . '\'"';
+
+		return '<' . $tagName . $attributeClass . ' ' . $href . ' title="' . $mediaTitle . '">' . $label . '</' . $tagName . '>';
 	}
 	
 	

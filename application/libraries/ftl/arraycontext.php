@@ -96,7 +96,7 @@ class FTL_ArrayContext extends FTL_Context
 	{
 		if ( ! is_null($array))
 		{
-			if ( ! isset($this->{$array}))
+			if ( ! isset($this->{'_registry_'.$array}))
 				$this->{'_registry_'.$array} = new FTL_VarStack();
 
 			$this->{'_registry_'.$array}->{$key} = $value;
@@ -158,7 +158,7 @@ class FTL_ArrayContext extends FTL_Context
 	 */
 	public function tag_missing($name, $args = array(), $block = NULL)
 	{
-		if(isset($args['use_globals']) && strtolower($args['use_globals']) == 'yes')
+		if(isset($args['use_globals']) && strtolower($args['use_globals']) === 'yes')
 		{
 			// do we have a matching global key?
 			if(isset($this->globals->$name))

@@ -9,7 +9,6 @@
 
     <h2 class="main tree" id="main-title"><?php echo lang('ionize_menu_menu') ?></h2>
 
-
 	<!-- Sortable UL -->
 	<ul id="menuContainer" class="sortable">
 
@@ -42,8 +41,8 @@
 
 
 					<!-- Drag icon -->
-					<div class="drag left">
-						<img src="<?php echo admin_style_url(); ?>images/icon_16_ordering.png" />
+					<div class="drag left mt5">
+						<span class="icon ordering"></span>
 					</div>
 
 
@@ -132,7 +131,6 @@
 
 
 <script type="text/javascript">
-	
 	// Toolbox
 	ION.initToolbox('menu_toolbox');
 
@@ -154,9 +152,4 @@
 			$('formMenu' + id)
 		)
 	});
-
-
 </script>
-
-
-

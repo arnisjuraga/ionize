@@ -28,7 +28,20 @@ class Element_definition extends MY_Admin {
 		'8' => 'Medias',
 	);*/
 
+	/** @var  Element_model */
+	public $element_model;
 
+	/** @var  Element_definition_model */
+	public $element_definition_model;
+
+	/** @var  Extend_field_model */
+	public $extend_field_model;
+	
+	/** @var  Page_model */
+	public $page_model;
+
+	/** @var  Article_model */
+	public $article_model;
 
 	// ------------------------------------------------------------------------
 	
@@ -42,7 +55,9 @@ class Element_definition extends MY_Admin {
             array(
                 'element_model',
                 'element_definition_model',
-                'extend_field_model'
+                'extend_field_model',
+                'page_model',
+                'article_model'
             ), '', TRUE);
 	}
 
@@ -51,7 +66,7 @@ class Element_definition extends MY_Admin {
 	
 	
 	/**
-	 * Outputs the Definiton list
+	 * Outputs the Definition list
 	 *
 	 */
 	function index()
@@ -100,8 +115,27 @@ class Element_definition extends MY_Admin {
 	
 	
 	// ------------------------------------------------------------------------
-	
-	
+
+
+	/**
+	 * Get definitions list
+	 * JSON output
+	 *
+	 */
+	public function get_definitions()
+	{
+		$elements = $this->element_definition_model->get_lang_list(
+			array('order_by'=>'ordering ASC'),
+			Settings::get_lang('default')
+		);
+
+		$this->xhr_output($elements);
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
 	/**
 	 * Returns the element definition list
 	 * Used to admin elements (elements_definition_list and element_definition views)
@@ -154,7 +188,7 @@ class Element_definition extends MY_Admin {
 	
 	
 	/**
-	 * Returns the list of definition for a given parent
+	 * Returns the list definition for a given parent
 	 * Used to build the tabs of elements definitions in parents panels (page, article)
 	 *
 	 * @returns String	JSON object of all definitions containing elements
@@ -248,6 +282,7 @@ class Element_definition extends MY_Admin {
 			if ($field == 'name')
 			{
 				$element = $this->element_definition_model->get($data);
+
 				if ( ! empty($element) && $element['id_element_definition'] != $id)
 				{
 					$this->callback = array
@@ -471,7 +506,7 @@ class Element_definition extends MY_Admin {
 			array('id_element_definition' => $id_element),
 			Settings::get_lang('default')
 		);
-		
+
 		// Element's fields definition
 		$fields = $this->extend_field_model->get_list(
 			array(

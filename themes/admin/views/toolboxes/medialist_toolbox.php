@@ -5,21 +5,25 @@
 	</a>
 </div>
 
+<?php
+	$isActiveMedialistViewCard = !array_key_exists('medialistView', $_COOKIE) || $_COOKIE['medialistView'] === 'card';
+?>
 <div class="divider">
-	<a class="button light right" id="btnMedialistViewList">
+	<a class="button light right<?php if(! $isActiveMedialistViewCard) { ?> active<?php } ?>" id="btnMedialistViewList">
 		<i class="icon-list"></i>
 		<?php echo lang('ionize_button_list_view') ?>
 	</a>
 </div>
 
 <div class="divider">
-	<a class="button light right" id="btnMedialistViewCard">
+	<a class="button light right<?php if($isActiveMedialistViewCard) { ?> active<?php } ?>" id="btnMedialistViewCard">
 		<i class="icon-card"></i>
 		<?php echo lang('ionize_button_card_view') ?>
 	</a>
 </div>
 
 <div class="right mr10">
+	<i class="icon icon filter floatleft" style="cursor:default;"> </i>
 	<select class="select" id="mediaListFilter">
 		<option value="0"><?php echo lang('ionize_medialist_filter_by') ?></option>
 		<option value="1"><?php echo lang('ionize_medialist_filter_by_alt_missing') ?></option>
@@ -46,8 +50,13 @@
 	var cookieName = 'medialistView';
 
 	// Cards view
-	$('btnMedialistViewCard').addEvent('click', function(btn)
+	var el_btnMedialistViewCard = $('btnMedialistViewCard');
+	var el_btnMedialistViewList = $('btnMedialistViewList');
+	el_btnMedialistViewCard.addEvent('click', function(btn)
 	{
+		el_btnMedialistViewCard.addClass('active');
+		el_btnMedialistViewList.removeClass('active');
+
 		$$('#mediaList .media').removeClass('list').addClass('card');
 		$$('#mediaList .media .data').slide('hide');
 		$$('#mediaList .toggle-card').show();
@@ -55,8 +64,11 @@
 	});
 
 	// List view
-	$('btnMedialistViewList').addEvent('click', function(btn)
+	el_btnMedialistViewList.addEvent('click', function(btn)
 	{
+		el_btnMedialistViewCard.removeClass('active');
+		el_btnMedialistViewList.addClass('active');
+
 		$$('#mediaList .toggle-card').addClass('panel-expand').addClass('panel-expanded');
 		$$('#mediaList .toggle-card').removeClass('panel-collapse').removeClass('panel-collapsed');
 		$$('#mediaList .toggle-card').hide();
@@ -95,6 +107,5 @@
 			}
 		);
 	});
-
 
 </script>

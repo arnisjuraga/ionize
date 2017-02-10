@@ -1,4 +1,3 @@
-
 <?php if( ! empty($link)) :?>
 
 	<dl class="small dropArticleAsLink dropPageAsLink">
@@ -11,13 +10,13 @@
 			
 				<li class="sortme">
 		
-					<a class="left link-img <?php echo $link_type; ?>" ></a>
+					<a class="left link-img <?php echo $link_type; ?>" title="<?php echo $breadcrumb ?>"></a>
 			
 					<!-- Unlink icon -->
 					<a class="icon unlink right"></a>
 			
 					<!-- Title -->
-					<a id="link_title" class="pl5 pr10" title="<?php echo $link; ?>"><?php echo $link; ?></a>
+					<a id="link_title" class="pl5 pr10" title="<?php echo $breadcrumb; ?>"><?php echo $link; ?></a>
 		
 				</li>
 		
@@ -36,17 +35,26 @@
 		{
 			$('link_title').addEvent('click', function(e){window.open(this.get('text'))});
 		}
+		else if ('<?php echo $link_type; ?>' == 'anchor')
+		{
+		}
 		else
 		{
-			$('link_title').addEvent('click', function(e){
-                ION.contentUpdate({
-					'element': $(ION.mainpanel),
-					'url': '<?php echo $link_type; ?>/edit/<?php echo $link_id; ?>'
+			var id = '<?php echo $link_id; ?>',
+				type = '<?php echo $link_type; ?>',
+				title = '<?php echo addslashes($link); ?>'
+			;
+
+			$('link_title').addEvent('click', function()
+			{
+				ION.splitPanel({
+					'urlMain': ION.adminUrl + type + '/edit/' + id,
+					'urlOptions': ION.adminUrl + type +'/get_options/' + id,
+					'title': Lang.get('ionize_title_edit_' + type) + ' : ' + title
 				});
 			});
 		}
 		
-	
 	</script>
 	
 <?php else :?>
@@ -57,27 +65,25 @@
 			<br/>
 		</dt>
 		<dd>
-			<textarea id="link" class="inputtext h40 droppable" alt="<?php echo lang('ionize_label_drop_link_here'); ?>"></textarea>
+			<textarea id="link" class="inputtext h40 droppable w100p" alt="<?php echo lang('ionize_label_drop_link_here'); ?>"></textarea>
 			<br />
 			<a id="add_link"><?php echo lang('ionize_label_add_link'); ?></a>
 		</dd>
 	</dl>
 
 	<script type="text/javascript">
-		
-		
+
 		ION.initDroppable();
 
 		$('add_link').addEvent('click', function()
 		{
-			ION.JSON('<?php echo $parent; ?>/add_link', {'receiver_rel': $('rel').value, 'link_type': 'external', 'url': $('link').value});
+			var value = $('link').value,
+				type = 'external';
+
+			if (value.substr(0,1) == '#') type='anchor';
+			ION.JSON('<?php echo $parent; ?>/add_link', {'receiver_rel': $('rel').value, 'link_type': type, 'url': value });
 		})
-		
 
 	</script>
 
-
 <?php endif ;?>
-
-
-

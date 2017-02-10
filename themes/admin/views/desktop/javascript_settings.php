@@ -19,13 +19,20 @@
 ?>
 <?php
 	$settings = json_encode(Settings::get_settings());
+	$languages = json_encode(Settings::get_languages());
 ?>
+var ENVIRONMENT = '<?php echo ENVIRONMENT ?>';
 var Settings = {
 	'setting' : JSON.decode(<?php echo json_encode($settings); ?>, true)
 }
+Settings['languages'] = JSON.decode(<?php echo json_encode($languages); ?>, true);
 Object.append(Settings, {
 	get: function(key)
 	{
 		return this.setting[key];
+	},
+	set: function(key, value)
+	{
+		this.setting[key] = value;
 	}
 });

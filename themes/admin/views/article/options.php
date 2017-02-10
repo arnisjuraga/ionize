@@ -10,13 +10,6 @@
  */
 
 ?>
-<style type="text/css">
-/*
-	.textboxlist-bit-editable:after{
-		content: "<?php echo lang('ionize_help_tag_textbox') ?>";
-	}
-*/
-</style>
 
 <form name="articleOptionsForm" id="articleOptionsForm" method="post" action="<?php echo admin_url() . 'article/save_options'?>">
 
@@ -28,7 +21,6 @@
 	<input type="hidden" name="main_parent" id="main_parent" value="<?php echo $main_parent; ?>" />
 	<input type="hidden" name="has_url" id="has_url" value="<?php echo $has_url; ?>" />
 
-
 	<!-- Informations -->
 	<div class="info">
 
@@ -39,33 +31,49 @@
 				<dl class="compact small">
 					<dt><label><?php echo lang('ionize_label_name'); ?></label></dt>
 					<dd>
-						<a class="edit dynamic-input" data-id="<?php echo $id_article; ?>" data-name="name" data-id_page="<?php echo $id_page; ?>" data-url="article/update_name"><?php echo $name; ?></a>
+						<a style="line-height: 26px;" class="edit dynamic-input" data-id="<?php echo $id_article; ?>" data-name="name" data-id_page="<?php echo $id_page; ?>" data-url="article/update_name"><?php echo $name; ?></a>
 					</dd>
 				</dl>
 
 			<?php endif ;?>
 
+			<!-- Content Types -->
+			<?php if (isset($content_types)) :?>
+				<dl class="small">
+					<dt>
+						<label for="id_content_type"><?php echo lang('ionize_label_content_type'); ?></label>
+					</dt>
+					<dd>
+						<?php echo $content_types; ?>
+					</dd>
+				</dl>
+			<?php endif ;?>
+
+
+
 			<?php if (humanize_mdate($logical_date, Settings::get('date_format')) != '') :?>
-				<dl class="small compact">
+				<dl class="not-editable small compact">
 					<dt><label><?php echo lang('ionize_label_date'); ?></label></dt>
 					<dd><?php echo humanize_mdate($logical_date, Settings::get('date_format')); ?> <span class="lite"><?php echo humanize_mdate($logical_date, '%H:%i:%s'); ?></span></dd>
 				</dl>
 			<?php endif ;?>
 
-			<dl class="small compact">
-				<dt><label><?php echo lang('ionize_label_created'); ?></label></dt>
-				<dd><?php echo humanize_mdate($created, Settings::get('date_format')); ?> <span class="lite"><?php echo humanize_mdate($created, '%H:%i:%s'); ?></span></dd>
-			</dl>
+			<?php if (humanize_mdate($created, Settings::get('date_format')) != '') :?>
+				<dl class="not-editable small compact">
+					<dt><label><?php echo lang('ionize_label_created'); ?></label></dt>
+					<dd><?php echo humanize_mdate($created, Settings::get('date_format')); ?> <span class="lite"><?php echo humanize_mdate($created, '%H:%i:%s'); ?></span></dd>
+				</dl>
+			<?php endif ;?>
 
 			<?php if (humanize_mdate($updated, Settings::get('date_format')) != '') :?>
-				<dl class="small compact">
+				<dl class="not-editable small compact">
 					<dt><label><?php echo lang('ionize_label_updated'); ?></label></dt>
 					<dd><?php echo humanize_mdate($updated, Settings::get('date_format')); ?> <span class="lite"><?php echo humanize_mdate($updated, '%H:%i:%s'); ?></span></dd>
 				</dl>
 			<?php endif ;?>
 
 			<?php if (humanize_mdate($publish_on, Settings::get('date_format')) != '') :?>
-				<dl class="small compact">
+				<dl class="not-editable small compact">
 					<dt><label><?php echo lang('ionize_label_publish_on'); ?></label></dt>
 					<dd><?php echo humanize_mdate($publish_on, Settings::get('date_format')); ?> <span class="lite"><?php echo humanize_mdate($publish_on, '%H:%i:%s'); ?></span></dd>
 				</dl>
@@ -94,6 +102,24 @@
 		<!-- Attributes -->
 		<h3 class="toggler toggler-options"><?php echo lang('ionize_title_attributes'); ?></h3>
 		<div class="element element-options">
+
+			<!-- Type -->
+			<?php if ( ! empty($all_article_types)) :?>
+			<dl class="small">
+				<dt>
+					<label for="article_type<?php echo $id_article; ?>" title="<?php echo ucfirst(lang('ionize_label_type')); ?>">
+						<?php echo ucfirst(lang('ionize_label_type')); ?>
+					</label>
+				</dt>
+				<dd>
+					<select id="article_type<?php echo $id_article; ?>" class="p1 inputtext type left w100p" data-id="<?php echo $id_article; ?>">
+						<?php foreach($all_article_types as $idx => $type) :?>
+							<option <?php if ($article_type_current == $idx) :?>selected="selected"<?php endif; ?>  value="<?php echo $idx; ?>"><?php echo $type; ?></option>
+						<?php endforeach ;?>
+					</select>
+				</dd>
+			</dl>
+			<?php endif ;?>
 
 			<!-- Indexed content -->
 			<dl class="small">
@@ -140,11 +166,6 @@
 			<!-- Categories & Tags -->
 			<div class="element-options-content">
 
-				<!-- Tags -->
-				<h4><?php echo lang('ionize_label_tags'); ?></h4>
-				<dfn><?php echo lang('ionize_help_tag_new') ?></dfn>
-				<input type="text" name="tags" value="" id="tags" />
-
 				<!-- Categories -->
 				<h4><?php echo lang('ionize_label_categories'); ?></h4>
 				<div id="categories">
@@ -152,10 +173,15 @@
 				</div>
 
 				<!-- Category create button -->
-				<a class="button light mb10" onclick="javascript:ION.formWindow('category', 'categoryForm', '<?php echo lang('ionize_title_category_new'); ?>', 'category/get_form/article/<?php echo $id_article; ?>', {width:360, height:230})">
+				<a class="button light mb10" onclick="ION.formWindow('category', 'categoryForm', '<?php echo lang('ionize_title_category_new'); ?>', 'category/get_form/article/<?php echo $id_article; ?>', {width:360, height:230})">
 					<i class="icon-plus"></i>
 					<?php echo lang('ionize_label_new_category'); ?>
 				</a>
+
+				<!-- Tags -->
+				<h4><?php echo lang('ionize_label_tags'); ?></h4>
+				<dfn><?php echo lang('ionize_help_tag_new') ?></dfn>
+				<input type="text" name="tags" value="" id="tags" />
 
 			</div>
 		</div>
@@ -168,7 +194,7 @@
 					<label for="logical_date"><?php echo lang('ionize_label_date'); ?></label>
 				</dt>
 				<dd>
-					<input id="logical_date" name="logical_date" type="text" class="inputtext w120 date" value="<?php echo humanize_mdate($logical_date, Settings::get('date_format'). ' %H:%i:%s'); ?>" />
+					<input id="logical_date" name="logical_date" type="text" class="inputtext w130 date" value="<?php echo humanize_mdate($logical_date, Settings::get('date_format'). ' %H:%i:%s'); ?>" />
 					<a class="icon clearfield date" data-id="logical_date"></a>
 				</dd>
 			</dl>
@@ -177,7 +203,7 @@
 					<label for="publish_on"><?php echo lang('ionize_label_publish_on'); ?></label>
 				</dt>
 				<dd>
-					<input id="publish_on" name="publish_on" type="text" class="inputtext w120 date" value="<?php echo humanize_mdate($publish_on, Settings::get('date_format'). ' %H:%i:%s'); ?>" />
+					<input id="publish_on" name="publish_on" type="text" class="inputtext w130 date" value="<?php echo humanize_mdate($publish_on, Settings::get('date_format'). ' %H:%i:%s'); ?>" />
 					<a class="icon clearfield date" data-id="publish_on"></a>
 				</dd>
 			</dl>
@@ -187,7 +213,7 @@
 					<label for="publish_off"><?php echo lang('ionize_label_publish_off'); ?></label>
 				</dt>
 				<dd>
-					<input id="publish_off" name="publish_off" type="text" class="inputtext w120 date"  value="<?php echo humanize_mdate($publish_off, Settings::get('date_format'). ' %H:%i:%s'); ?>" />
+					<input id="publish_off" name="publish_off" type="text" class="inputtext w130 date"  value="<?php echo humanize_mdate($publish_off, Settings::get('date_format'). ' %H:%i:%s'); ?>" />
 					<a class="icon clearfield date" data-id="publish_off"></a>
 				</dd>
 			</dl>
@@ -259,6 +285,26 @@
 		<!-- SEO -->
 		<h3 class="toggler toggler-options"><?php echo lang('ionize_title_seo'); ?></h3>
 		<div class="element element-options">
+
+
+			<!-- Priority -->
+			<dl class="small">
+				<dt>
+					<label for="priority" title="<?php echo lang('ionize_help_sitemap_priority'); ?>"><?php echo lang('ionize_label_sitemap_priority'); ?></label>
+				</dt>
+				<dd>
+					<select name="priority" id="priority" class="inputtext w40">
+						<?php for($i=0; $i<=10; $i++) :?>
+
+							<option value="<?php echo $i; ?>"<?php if($priority == $i) :?> selected="selected"<?php endif ;?>><?php echo $i; ?></option>
+
+						<?php endfor; ?>
+					</select>
+				</dd>
+			</dl>
+
+
+
 
 			<!-- Meta_Description -->
 			<div class="element-options-content">
@@ -384,8 +430,8 @@
 	 * Calendars init
 	 *
 	 */
-	ION.initDatepicker('<?php echo Settings::get('date_format') ;?>');
-	ION.initClearField('#articleOptionsForm');
+	ION.initDatepicker('<?php echo Settings::get('date_format') ;?>', {timePicker:true});
+	ION.initClearField('articleOptionsForm');
 
 	/**
 	 * Add links on each parent page
@@ -436,9 +482,10 @@
 	);
 
 	// Copy content from one lang to another
-	if ($('copy_lang'))
+	var el_copy_lang = $('copy_lang');
+	if (el_copy_lang)
 	{
-		$('copy_lang').addEvent('click', function(e)
+		el_copy_lang.addEvent('click', function(e)
 		{
 			e.stop();
 
@@ -465,18 +512,31 @@
 			ION.JSON('article/update_field', {'field': 'indexed', 'value': value, 'id_article': $('id_article').value});
 		});
 
+		// Types
+		<?php if ( ! empty($all_article_types)) :?>
+			$('article_type<?php echo $id_article; ?>').addEvent('change', function(e)
+			{
+				ION.JSON('article/save_context', {
+					'id_article': <?php echo $id_article; ?>,
+					'id_page': $('rel').value.split('.')[0],
+					'id_type': $('article_type<?php echo $id_article; ?>').value
+				});
+			});
+		<?php endif; ?>
+
 		// Categories
-		var categoriesSelect = $('categories').getFirst('select');
+		var elCategories = $('categories');
+		var categoriesSelect = elCategories.getFirst('select');
 		categoriesSelect.addEvent('change', function(e)
 		{
-			var ids = new Array();
+			var ids = [];
 			var sel = this;
 			for (var i = 0; i < sel.options.length; i++) {
 				if (sel.options[i].selected) ids.push(sel.options[i].value);
 			}
 			ION.JSON('article/update_categories', {'categories': ids, 'id_article': $('id_article').value});
 		});
-		var nbCategories = ($('categories').getElements('option')).length;
+		var nbCategories = (elCategories.getElements('option')).length;
 		if (nbCategories > 5)
 		{
 			$$('#categories select').setStyles({

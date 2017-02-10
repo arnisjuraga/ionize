@@ -70,7 +70,7 @@
 						</a>
 					</div>
 					<div class="divider title-filter">
-						<?php echo lang('ionize_label_filter_by'); ?> :
+						<?php echo lang('ionize_label_filter_by'); ?>:
 					</div>
 
 				</div>
@@ -117,7 +117,6 @@
 									}
 
 									$class = ( ! empty($class)) ? ' ' . implode(' ', $class) : '';
-
 								?>
 								<tr class="translation_item translation_<?php echo $lang; ?><?php echo $class; ?>">
 									<th>
@@ -217,7 +216,6 @@
 </div>
 <script type="text/javascript">
 
-
 	//Panel toolbox
 	ION.initToolbox(
 		null,
@@ -269,13 +267,14 @@
 				'deleteTranslationTerm' + rel,
 				function()
 				{
-					var translationInputs = $('translationForm').getElements('input[name=key_' + rel + ']');
+					var translationForm   = $('translationForm');
+					var translationInputs = translationForm.getElements('input[name=key_' + rel + ']');
 
 					translationInputs.each(function(el){
 						el.setProperty('value', '');
 					});
 
-					ION.sendData(admin_url + 'translation/save', $('translationForm'))
+					ION.sendData(admin_url + 'translation/save', translationForm)
 				},
 				Lang.get('ionize_message_delete_translation')
 			);
@@ -334,7 +333,7 @@
 					item.hide();
 			})
 		});
-	}
+	};
 
 	// Show All Translation Items
 	var clearTranslationSearch = function()
@@ -347,7 +346,7 @@
 				item.setStyle('display', '');
 			})
 		});
-	}
+	};
 
 	// Add New Translation Item Button
 	$('addTranslationsButton').addEvent('click', function(){

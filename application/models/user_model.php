@@ -76,7 +76,7 @@ class User_model extends Base_model
 		if( ! $this->num_conds($identification))
 			return FALSE;
 
-		$fields = $this->{$this->db_group}->list_fields($this->table);
+		$fields = $this->list_fields($this->table);
 
 		foreach($identification as $key => $data)
 		{
@@ -153,6 +153,48 @@ class User_model extends Base_model
 
 
 	/**
+	 * @param int   $page
+	 * @param array $filter
+	 * @param int   $nb_by_page
+	 * @param array $where
+	 *
+	 * @return array
+	 */
+	public function get_pagination_list($page=1, $filter = array(), $nb_by_page=50, $where = array())
+	{
+		$page = $page - 1;
+		$offset = $page * $nb_by_page;
+		$like = array();
+
+		if ( ! empty($filter))
+		{
+			foreach($filter as $key => $val)
+			{
+				// $where[$key] = "like '%".$val."%'";
+				$like[$key] = $val;
+			}
+		}
+
+		$this->_join_role();
+		$items = self::get_list(array_merge($where, array('limit' => $nb_by_page, 'offset' => $offset, 'like' => $like)));
+
+		$this->_join_role();
+		$items_nb = self::count_where(array_merge($where, array('like' => $like)));
+
+		// Returned results
+		$result = array(
+			'items' => $items,
+			'nb' => $items_nb
+		);
+
+		return $result;
+	}
+
+
+	// --------------------------------------------------------------------
+
+
+	/**
 	 * @param array $where
 	 *
 	 * @return int
@@ -164,7 +206,9 @@ class User_model extends Base_model
 
 		$this->_join_role();
 
-		return parent::count($where);
+		$nb = parent::count($where);
+
+		return $nb;
 	}
 
 
@@ -196,7 +240,9 @@ class User_model extends Base_model
 		}
 		else
 		{
-			$id_user = $this->insert($user);
+            unset($user[$this->pk_name]);
+
+            $id_user = $this->insert($user);
 		}
 
 		// Set user's role
@@ -359,6 +405,34 @@ class User_model extends Base_model
 	}
 
 
+	// --------------------------------------------------------------------
+
+
+	/**
+	 * @param      $username
+	 * @param null $id_user
+	 *
+	 * @return bool
+	 *
+	 */
+	public function check_username_exists($username, $id_user = NULL)
+	{
+		$user = $this->get(array('username' => $username));
+
+		if ( ! is_null($id_user) && $id_user != FALSE)
+		{
+			if ( ! empty($user) && $user['id_user'] != $id_user)
+				return TRUE;
+		}
+		else
+		{
+			if ( ! empty($user))
+				return TRUE;
+		}
+		return FALSE;
+	}
+
+
 	// ------------------------------------------------------------------------
 
 
@@ -369,7 +443,7 @@ class User_model extends Base_model
 	 */
 	private function _clean_user_data($data)
 	{
-		$fields = $this->{$this->db_group}->list_fields($this->table);
+		$fields = $this->list_fields($this->table);
 
 		foreach($data as $key => $value)
 			if  (! in_array($key, $fields))

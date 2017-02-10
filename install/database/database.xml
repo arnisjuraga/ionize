@@ -3,7 +3,7 @@
 
 	<name>Ionize Database Creation script</name>
 	
-	<version>1.0.6</version>
+	<version>1.0.8</version>
 
 	<license>Open Source MIT license</license>
 
@@ -39,6 +39,7 @@
         <query>
 			CREATE TABLE IF NOT EXISTS article (
 			  id_article int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+			  id_content_type int(11) UNSIGNED DEFAULT NULL,
 			  name varchar(255) DEFAULT NULL,
 			  author varchar(55) DEFAULT NULL,
 			  updater varchar(55) DEFAULT NULL,
@@ -54,6 +55,7 @@
 			  comment_expire datetime,
 			  flag smallint(1) DEFAULT 0,
 			  has_url tinyint(1) UNSIGNED NOT NULL DEFAULT 1,
+			  priority smallint(1) UNSIGNED NOT NULL DEFAULT 5,
 			  PRIMARY KEY  (id_article)
 			) ENGINE=InnoDB  DEFAULT CHARSET=utf8  AUTO_INCREMENT=1;
 		</query>
@@ -71,7 +73,7 @@
 			  lang varchar(8) NOT NULL DEFAULT '',
 			  url VARCHAR( 100 ) NOT NULL DEFAULT '',
 			  title varchar(255) DEFAULT NULL,
-			  subtitle varchar(255) DEFAULT NULL,
+			  subtitle text DEFAULT NULL,
 			  meta_title varchar(255) DEFAULT NULL,
 			  content longtext,
 			  meta_keywords varchar(255) DEFAULT NULL,
@@ -161,6 +163,37 @@
 		</query>
 
 		<query>
+			CREATE TABLE content_type (
+			id_content_type int(11) unsigned NOT NULL AUTO_INCREMENT,
+			name varchar(50) DEFAULT NULL COMMENT 'Logical name',
+			type varchar(50) DEFAULT NULL COMMENT '''page'', ''article''',
+			view varchar(255) DEFAULT NULL COMMENT 'View',
+			view_single varchar(255) DEFAULT NULL COMMENT 'Page view for one single article',
+			PRIMARY KEY (id_content_type)
+			) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+		</query>
+
+		<query>
+			CREATE TABLE content_type_group (
+			id_content_type_group int(11) unsigned NOT NULL AUTO_INCREMENT,
+			id_content_type int(11) unsigned NOT NULL,
+			name varchar(50) DEFAULT NULL,
+			ordering int(11) DEFAULT NULL,
+			PRIMARY KEY (id_content_type_group)
+			) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+		</query>
+
+		<query>
+			CREATE TABLE content_type_group_items (
+			id_content_type_group int(11) unsigned NOT NULL,
+			item varchar(50) NOT NULL,
+			id_item int(11) unsigned NOT NULL,
+			ordering int(11) DEFAULT NULL,
+			PRIMARY KEY (id_content_type_group,item,id_item)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+		</query>
+
+		<query>
 			CREATE TABLE IF NOT EXISTS element (
 			  id_element int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
 			  id_element_definition int(11) UNSIGNED NOT NULL,
@@ -243,7 +276,8 @@
                 default_values smallint(1) NOT NULL DEFAULT '0',
                 `values` smallint(1) NOT NULL DEFAULT '0',
                 translated smallint(1) NOT NULL DEFAULT '0',
-                active smallint(6) DEFAULT '1',
+                active smallint(6) NOT NULL DEFAULT '1',
+                display smallint(6) NOT NULL DEFAULT '1',
                 validate varchar(50) DEFAULT NULL,
                 html_element varchar(20) NOT NULL DEFAULT 'input',
                 html_element_type varchar(20) NOT NULL DEFAULT 'text',
@@ -362,7 +396,6 @@
 				date datetime NOT NULL DEFAULT '0000-00-00 00:00:00' COMMENT 'Medium date',
 				link varchar(255) DEFAULT NULL					COMMENT 'Link to a resource, attached to this medium',
 				square_crop enum('tl','m','br') NOT NULL DEFAULT 'm',
---                path_hash varchar(100) NOT NULL DEFAULT  '',
 				PRIMARY KEY  (id_media)
 			) ENGINE=InnoDB  DEFAULT CHARSET=utf8  AUTO_INCREMENT=1;
 		</query>
@@ -427,15 +460,19 @@
 		</query>
 
         <query>
+            drop table if exists notification;
+        </query>
+        <query>
             CREATE TABLE IF NOT EXISTS notification (
-              id_notification int(11) unsigned NOT NULL,
+              id_notification int(11) unsigned NOT NULL AUTO_INCREMENT,
               date_creation date DEFAULT NULL,
+              code varchar(50) NULL,
               category varchar(25) DEFAULT NULL,
               title varchar(50) DEFAULT NULL,
               content text,
               `read` smallint(1) DEFAULT '0',
               PRIMARY KEY (id_notification)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
         </query>
 
         <query>
@@ -443,7 +480,7 @@
 			  id_page int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
 			  id_parent int(11) UNSIGNED NOT NULL DEFAULT 0,
 			  id_menu int(11) UNSIGNED NOT NULL DEFAULT 0,
-              id_type smallint(2) NOT NULL DEFAULT 0,
+			  id_content_type int(11) UNSIGNED DEFAULT NULL,
               id_subnav int(11) UNSIGNED NOT NULL DEFAULT 0,
 			  name varchar(255) DEFAULT NULL,
 			  ordering int(11) UNSIGNED DEFAULT 0,
@@ -459,10 +496,6 @@
 			  logical_date datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			  appears tinyint(1) UNSIGNED NOT NULL DEFAULT 1,
 			  has_url tinyint(1) UNSIGNED NOT NULL DEFAULT 1,
-			  view varchar(50) DEFAULT NULL										COMMENT 'Page view',
-			  view_single varchar(50) DEFAULT NULL								COMMENT 'Single Article Page view',
-			  article_list_view VARCHAR(50) DEFAULT NULL						COMMENT 'Article list view for each article linked to this page',
- 			  article_view varchar(50) DEFAULT NULL								COMMENT 'Article detail view for each article linked to this page',
 			  article_order VARCHAR(50) NOT NULL DEFAULT 'ordering'				COMMENT 'Article order in this page. Can be "ordering", "date"',
 			  article_order_direction VARCHAR(50) NOT NULL DEFAULT 'ASC',	
 			  link varchar(255) DEFAULT ''										COMMENT 'Link to internal / external resource',
@@ -497,13 +530,20 @@
 		</query>
 
 		<query>
+			CREATE TABLE IF NOT EXISTS page_category (
+			id_page INT(11) UNSIGNED NOT NULL ,
+			id_category INT(11) UNSIGNED NOT NULL
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
+		</query>
+
+		<query>
 			CREATE TABLE IF NOT EXISTS page_lang (
 			  lang varchar(8) NOT NULL DEFAULT '',
 			  id_page int(11) UNSIGNED NOT NULL DEFAULT 0,
 			  url VARCHAR( 100 ) NOT NULL DEFAULT '',
 			  link VARCHAR( 255 ) NOT NULL DEFAULT '',
 			  title varchar(255) DEFAULT NULL,
-			  subtitle varchar(255) DEFAULT NULL,
+			  subtitle text DEFAULT NULL,
 			  nav_title VARCHAR( 255 ) NOT NULL DEFAULT  '',
 			  subnav_title VARCHAR( 255 ) NOT NULL DEFAULT '',
 			  meta_title varchar(255) DEFAULT NULL,
@@ -522,6 +562,14 @@
               ordering int(11) UNSIGNED DEFAULT 9999,
   			  lang_display varchar(8) DEFAULT NULL,
 			  PRIMARY KEY  (id_page,id_media)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
+		</query>
+
+		<query>
+			CREATE TABLE IF NOT EXISTS page_tag (
+			id_page int(11) UNSIGNED NOT NULL,
+			id_tag int(11) UNSIGNED NOT NULL,
+			PRIMARY KEY  (id_page, id_tag)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
 		</query>
 
@@ -605,7 +653,28 @@
 			) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
 		</query>
 
-		<query>
+        <query>
+            CREATE TABLE IF NOT EXISTS ui_element (
+                id_ui_element int(11) unsigned NOT NULL AUTO_INCREMENT,
+                id_company int(11) unsigned DEFAULT NULL,
+                type enum('tab','table','list') DEFAULT NULL,
+                panel varchar(25) DEFAULT NULL COMMENT 'UI context',
+                title varchar(50) DEFAULT NULL,
+                ordering int(10) unsigned NOT NULL DEFAULT '0',
+                PRIMARY KEY (id_ui_element)
+            ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+        </query>
+
+        <query>
+            CREATE TABLE IF NOT EXISTS ui_element_lk_extend (
+                id_ui_element int(11) unsigned NOT NULL,
+                id_extend int(11) NOT NULL DEFAULT '0',
+                ordering int(10) unsigned NOT NULL DEFAULT '0',
+                PRIMARY KEY (id_ui_element,id_extend)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+        </query>
+
+        <query>
 			CREATE TABLE IF NOT EXISTS url (
 			  id_url int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
 			  id_entity int(11) UNSIGNED NOT NULL,
@@ -651,11 +720,13 @@
 	<content>
 	
 		<query>DROP INDEX idx_unq_setting ON setting;</query>
+		<query>update setting set lang='' where lang is null;</query>
 		<query>CREATE UNIQUE INDEX idx_unq_setting ON setting (name, lang);</query>
 
 		<query>TRUNCATE TABLE login_tracker;</query>
 		
         <query>
+			<![CDATA[
             INSERT INTO extend_field_type (id_extend_field_type, type_name, default_values, `values`, translated, active, validate, html_element, html_element_type, html_element_class, html_element_pattern)
             VALUES
             (1,'Input',1,0,1,1,NULL,'input','text','w95p inputtext',NULL),
@@ -663,13 +734,16 @@
             (3,'Textarea + Editor',1,0,1,1,NULL,'textarea','editor','w95p smallTinyTextarea inputtext',NULL),
             (4,'Checkbox',1,1,0,1,NULL,'input','checkbox','checkbox',NULL),
             (5,'Radio',1,1,0,1,NULL,'input','radio','radio',NULL),
-            (6,'Select',1,1,0,1,NULL,'input','select','select',NULL),
-            (7,'Date Time',0,0,0,1,NULL,'input','date','date w120 inputtext',NULL),
+            (6,'Select',1,1,0,1,NULL,'input','select','select inputtext',NULL),
+            (7,'Date',0,0,0,1,NULL,'input','date','w130 inputtext',NULL),
             (8,'Medias',0,0,1,1,NULL,'div','media',NULL,NULL),
+            (9,'Color',0,0,0,1,NULL,'input','color','color w120 inputtext',NULL),
+			(10,'Date & Time',0,0,0,1,NULL,'input','datetime','w130 inputtext',NULL),
             (100,'Number',1,0,0,1,'numeric','input','number','w120 inputtext',NULL),
             (110,'Email',0,0,0,1,'email','input','email','w95p inputtext',NULL),
-            (120,'Phone',0,0,0,1,NULL,'input','tel','w140 inputtext','^((\\+\\d{1,3}(-| )?\\(?\\d\\)?(-| )?\\d{1,5})|(\\(?\\d{2,6}\\)?))(-| )?(\\d{3,4})(-| )?(\\d{4})(( x| ext)\\d{1,5}){0,1}$'),
+            (120,'Phone',0,0,0,1,'digits','input','tel','w140 inputtext','^((\\+\\d{1,3}(-| )?\\(?\\d\\)?(-| )?\\d{1,5})|(\\(?\\d{2,6}\\)?))(-| )?(\\d{3,4})(-| )?(\\d{4})(( x| ext)\\d{1,5}){0,1}$'),
             (130,'Internal Link',0,0,1,1,NULL,'div','link','droppable',NULL);
+            ]]>
         </query>
         
 		<query>INSERT IGNORE INTO role VALUES (1, 10000, 'super-admin', 'Super Admin', '');</query>
@@ -830,7 +904,7 @@
         <query>DELETE FROM setting WHERE name='filemanager';</query>
 
 
-        <query>INSERT IGNORE INTO setting VALUES ('', 'ionize_version', '1.0.6.1', '');</query>
+        <query>INSERT IGNORE INTO setting VALUES ('', 'ionize_version', '1.0.9', '');</query>
         <query>INSERT IGNORE INTO setting VALUES ('', 'site_email', '', '');</query>
 		<query>INSERT IGNORE INTO setting VALUES ('', 'files_path', 'files', '');</query>
 		<query>INSERT IGNORE INTO setting VALUES ('', 'theme', 'DEFAULT', '');</query>

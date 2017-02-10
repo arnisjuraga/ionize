@@ -51,6 +51,11 @@ class CI_Router
 	public $lang_key = '';
 
 	/*
+	 * Raw detected key.
+	 */
+	private $raw_key = '';
+
+	/*
 	 * List of languages which can be used.
 	 * 
 	 * Format: array(lang_abbreviation => human_readable_english)
@@ -89,7 +94,7 @@ class CI_Router
 		{
 			if ( ! in_array($_SERVER['REMOTE_ADDR'], config_item('maintenance_ips')))
 			{
-				$content = "Website in maintenance";
+				$content = 'Website in maintenance';
 				
 				if (file_exists(FCPATH.'maintenance.html'))
 				{
@@ -210,7 +215,6 @@ class CI_Router
 			
 			// use the default controller
 			if(empty($this->uri->uri_string))
-//				$this->load_default_uri();
 				$this->uri->uri_string = '';
 
 			$this->uri->_remove_url_suffix();
@@ -218,10 +222,10 @@ class CI_Router
 			// clean the uri and explode it
 			$this->explode_segments($this->uri->uri_string);
 
-			$raw_key = current($this->uri->segments);
+			$this->raw_key = current($this->uri->segments);
 
 			// Language key : check if we have a valid language key there
-			if($key = $this->validate_lang_key($raw_key))
+			if($key = $this->validate_lang_key($this->raw_key))
 			{
 				if (count($this->uri->segments) == 1 && $key == $this->config->item('default_lang_code'))
 					$this->redirect_home_to_base_url();
@@ -235,18 +239,11 @@ class CI_Router
 
 				if(empty($this->uri->segments))
 				{
-					// load the default uri again
-					// $this->load_default_uri();
-					// $this->uri->_remove_url_suffix();
-					// clean the uri and explode it
-					// $this->explode_segments($this->uri->uri_string);
-
 					$this->uri->uri_string = '';
 				}
 				else
 				{
 					// remove the language key from the uri_string
-					//$this->uri->uri_string = '/' . preg_replace('/\/?'.preg_quote($raw_key).'\//', '', $this->uri->uri_string);
 					$this->uri->uri_string = strstr($this->uri->uri_string, '/');
 				}
 			}
@@ -256,7 +253,7 @@ class CI_Router
 				$this->detect_language();
 
 				// Home Page : Redirect to detected lang ?
-				if ($raw_key == '')
+				if ($this->raw_key == '')
 				{
 					$this->redirect_home_to_lang_url();
 				}
@@ -319,16 +316,14 @@ class CI_Router
 	{
 		$str = preg_replace("|/*(.+?)/*$|", "\\1", $str);
 		
-		if($str != '' && $this->config->item('permitted_uri_chars') != '')
+		if(    ($str != '' && $this->config->item('permitted_uri_chars') != '')
+			&& (! preg_match("|^[{$this->config->item('permitted_uri_chars')}/]+$|i", $str)))
 		{
-			if ( ! preg_match("|^[".$this->config->item('permitted_uri_chars')."/]+$|i", $str))
-			{
 				header('HTTP/1.1 400 Bad Request');
 				show_error('The URI you submitted has disallowed characters.');
-			}
 		}
 		
-		// Convert programatic characters to entities
+		// Convert programmatic characters to entities
 		$bad	= array('$', 		'(', 		')',	 	'%28', 		'%29');
 		$good	= array('&#36;',	'&#40;',	'&#41;',	'&#40;',	'&#41;');
 
@@ -377,13 +372,10 @@ class CI_Router
 				show_error("Unable to determine what should be displayed. A default route has not been specified in the module '$this->module' routing file.");
 			}
 
-			$segments = explode('/', $default);
+			// $segments = explode('/', $default);
 		}
 
-		///////////////////////////////////////////
-		// FROM CodeIgniter, slightly modified by Martin Wernstahl
-		///////////////////////////////////////////
-
+		// FROM CodeIgniter, slightly modified
 		// Turn the segment array into a URI string
 		$uri = implode('/', $this->uri->segments);
 
@@ -513,6 +505,29 @@ class CI_Router
 
 	// ------------------------------------------------------------------------
 
+
+	public function get_lang_key()
+	{
+		return $this->lang_key;
+	}
+
+	// ------------------------------------------------------------------------
+
+
+	public function get_raw_key()
+	{
+		return $this->raw_key;
+	}
+
+	// ------------------------------------------------------------------------
+
+	public function is_home()
+	{
+		return empty($this->raw_key);
+	}
+
+	// ------------------------------------------------------------------------
+
 	/**
 	 * Set the default language regarding the URL (for admin)
 	 * and regarding the Cookie or the Browser's user's language
@@ -532,23 +547,9 @@ class CI_Router
 		else
 		{
 			$selected_language = NULL;
-			$raw_key = current($this->uri->segments);
 
 			// Case of Home page with Cookie : The asked lang code is the default one
-/*
-			if (
-				$raw_key == '' &&
-				! empty($_COOKIE['ion_selected_language'])
-			)
-			{
-				$selected_language = $this->config->item('default_lang_code');
-			}
-			// Try to get the cookie
-			else
-			{
-*/
-				$selected_language = ( ! empty($_COOKIE['ion_selected_language'])) ? $_COOKIE['ion_selected_language'] : NULL ;
-//			}
+			$selected_language = ( ! empty($_COOKIE['ion_selected_language'])) ? $_COOKIE['ion_selected_language'] : NULL ;
 
 			if( ! is_null($selected_language))
 			{
@@ -599,8 +600,8 @@ class CI_Router
 			log_message('debug', 'Router : Redirect to : '. $url);
 
 			// 302 Found
-			header('HTTP/1.1 302 Found');
-			header('Location: '.$url, TRUE, 302);
+			header('HTTP/1.1 301 Moved Permanently');
+			header('Location: '.$url, TRUE, 301);
 		}
 	}
 
@@ -610,8 +611,8 @@ class CI_Router
 		$url = config_item('base_url');
 
 		// 302 Found
-		header('HTTP/1.1 302 Found');
-		header('Location: '.$url, TRUE, 302);
+		header('HTTP/1.1 301 Moved Permanently');
+		header('Location: '.$url, TRUE, 301);
 	}
 
 
@@ -627,8 +628,8 @@ class CI_Router
 		
 		$segments = array_values($this->uri->segment_array());
 
-// If installer warning, the users languages are detected !
-// Not important, but not so clean, should be correctly implemented !
+		// If installer warning, the users languages are detected !
+		// Not important, but not so clean, should be correctly implemented !
 
 		// Admin lang key
 		if (
@@ -645,7 +646,7 @@ class CI_Router
 			}
 			else
 			{
-				log_message('debug', 'Router: The key "'.$key.'" was not a valid admin language key.');
+				log_message('debug', 'Router: The key "'.$key.'" is not a valid admin language key.');
 			}
 		}
 		// User defined languages
@@ -659,7 +660,7 @@ class CI_Router
 		}
 		else
 		{
-			log_message('debug', 'Router: The key "'.$key.'" was not a valid language key.');
+			log_message('debug', 'Router: The key "'.$key.'" is not a valid language key.');
 		}
 
 		return FALSE;
@@ -706,7 +707,6 @@ class CI_Router
 
 	public function fetch_class()
 	{
-//		return $this->class . '_Controller';
 		return $this->class;
 	}
 
@@ -718,7 +718,12 @@ class CI_Router
 	}
 	
 	// ------------------------------------------------------------------------
-	
+
+	/**
+	 * @deprecated		Use get_lang_key() instead
+	 *
+	 * @return string
+	 */
 	public function fetch_lang_key()
 	{
 		return $this->lang_key;
@@ -749,4 +754,4 @@ class CI_Router
 
 
 /* End of file MY_Router.php */
-/* Location: ./application/libraries/MY_Router.php */
+/* Location: ./application/core/Router.php */

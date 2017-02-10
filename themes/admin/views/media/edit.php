@@ -6,12 +6,12 @@
 
 $pictureSize = NULL;
 
-if($type == 'picture')
+if($type === 'picture')
 {
 	$pictureSize = @getimagesize(DOCPATH.$path);
 }
 
-$margin = ($type == 'video') ? '180px' : (($type == 'music') ? '130px' : '140px');
+$margin = ($type === 'video') ? '180px' : (($type === 'music') ? '130px' : '140px');
 
 ?>
 
@@ -21,7 +21,7 @@ $margin = ($type == 'video') ? '180px' : (($type == 'music') ? '130px' : '140px'
     <div id="media-tracker-<?php echo $id_media; ?>"></div>
 
 	<!-- Picture file -->
-	<?php if($type == 'picture') :?>
+	<?php if($type === 'picture') :?>
 		<?php
 			$thumb_size = (Settings::get('media_thumb_size') != '') ? Settings::get('media_thumb_size') : '120';
 		?>
@@ -31,7 +31,7 @@ $margin = ($type == 'video') ? '180px' : (($type == 'music') ? '130px' : '140px'
 	<?php endif ;?>
 
 	<!-- Music file -->
-	<?php if($type == 'music') :?>
+	<?php if($type === 'music') :?>
 		<div class="left">
 			<div class="ui360 ui360-vis small"">
 				<a id="sound<?php echo $id_media ?>" href="<?php echo base_url().$path; ?>" target="_blank"><?php echo $path ?></a>
@@ -53,7 +53,7 @@ $margin = ($type == 'video') ? '180px' : (($type == 'music') ? '130px' : '140px'
 	<?php endif ;?>
 	
 	<!-- Video file -->
-	<?php if($type == 'video') :?>
+	<?php if($type === 'video') :?>
 		
 		<?php if($provider != '') :?>
 
@@ -97,7 +97,7 @@ $margin = ($type == 'video') ? '180px' : (($type == 'music') ? '130px' : '140px'
 			<?php if (file_exists(DOCPATH . $path)) :?>
 				<?php echo sprintf('%01.2f', filesize(DOCPATH . $path) / (1024 )); ?> ko
 
-				<?php if($type == 'picture') :?>
+				<?php if($type === 'picture') :?>
 					-
 					<?php if ( ! is_null($pictureSize)) :?>
 						<?php echo($pictureSize['0']); ?> x <?php echo($pictureSize['1']); ?> px
@@ -107,6 +107,15 @@ $margin = ($type == 'video') ? '180px' : (($type == 'music') ? '130px' : '140px'
 							<?php echo lang('ionize_label_media_crop_picture'); ?>
 						</a>
 					<?php endif ;?>
+					
+					<a id="imagePreviousLink" data-id="<?php echo $id_media; ?>" class="light button mt10">
+						<i class="icon arrow-left"></i>
+						<?php echo lang('ionize_button_previous'); ?>
+					</a>
+					<a id="imageNextLink" data-id="<?php echo $id_media; ?>" class="light button mt10">
+						<i class="icon arrow-right"></i>
+						<?php echo lang('ionize_button_next'); ?>
+					</a>
 				<?php endif ;?>
 
 			<?php else :?>
@@ -149,7 +158,7 @@ $margin = ($type == 'video') ? '180px' : (($type == 'music') ? '130px' : '140px'
 					<li class="tab_media<?php if($l['def'] == '1') :?> dl<?php endif ;?>" rel="<?php echo $l['lang']; ?>"><a><span><?php echo ucfirst($l['name']); ?></span></a></li>
 				<?php endforeach ;?>
 
-				<?php if($type == 'picture') :?>
+				<?php if($type === 'picture') :?>
 					<li class="right"><a><span><?php echo lang('ionize_title_options'); ?></span></a></li>
 				<?php endif ;?>
 
@@ -179,7 +188,7 @@ $margin = ($type == 'video') ? '180px' : (($type == 'music') ? '130px' : '140px'
 						</dd>
 					</dl>
 
-					<?php if(pathinfo(FCPATH.$path, PATHINFO_EXTENSION) == 'mp3') :?>
+					<?php if(pathinfo(FCPATH.$path, PATHINFO_EXTENSION) === 'mp3') :?>
 
 					<dl class="small mt10">
 						<dt>
@@ -215,7 +224,7 @@ $margin = ($type == 'video') ? '180px' : (($type == 'music') ? '130px' : '140px'
 			<?php endforeach ;?>
 
 			<!-- Thumbnails preferences -->
-			<?php if($type == 'picture') :?>
+			<?php if($type === 'picture') :?>
 				<div class="tabcontent<?php echo $id_media; ?>">
 					
 					<!-- Thumbnail square crop area -->
@@ -286,12 +295,28 @@ $margin = ($type == 'video') ? '180px' : (($type == 'music') ? '130px' : '140px'
 
 <div class="buttons">
 	<button id="bSavemedia<?php echo $id_media; ?>" type="button" class="button yes right"><?php echo lang('ionize_button_save_close'); ?></button>
+	<button id="bSavemediaDontClose<?php echo $id_media; ?>" type="button" class="button blue yes right"><?php echo lang('ionize_button_save'); ?></button>
 	<button id="bCancelmedia<?php echo $id_media; ?>"  type="button" class="button no right"><?php echo lang('ionize_button_cancel'); ?></button>
 </div>
 
 
 <script type="text/javascript">
 
+	var elButtonSaveDontClose = $('bSavemediaDontClose<?php echo $id_media; ?>');
+	elButtonSaveDontClose.addEvent('click', function() {
+		// @todo	extend ionize_forms.js::setFormSubmit() with option to not close the parent, this option must allow to vary upon the same form so that there can be two save buttons with different behaviour at the same time
+		ION.cancelSaveWarning();
+		elButtonSaveDontClose.addClass('disabled');
+		var elForm = $('mediaForm<?php echo $id_media; ?>');
+		var parent = elForm.getParent('.mocha');
+		ION.updateRichTextEditors();	// tinyMCE and CKEditor triggerSave
+
+		var options = $('mediaForm<?php echo $id_media; ?>').toQueryString().parseQueryString();
+		options.onSuccess = function() { elButtonSaveDontClose.removeClass('disabled'); };
+		var request = new Request.JSON( ION.getJSONRequestOptions(elForm.action, elForm, options ) );
+		request.send();
+	});
+	
 	var id_media = '<?php echo $id_media; ?>';
 	/**
 	 * Calendars init
@@ -302,7 +327,7 @@ $margin = ($type == 'video') ? '180px' : (($type == 'music') ? '130px' : '140px'
 	/**
 	 * Clear Field Init
 	 */
-	ION.initClearField('#mediaForm' + id_media);
+	ION.initClearField('mediaForm' + id_media);
 
 	/** 
 	 * Tabs init
@@ -319,11 +344,10 @@ $margin = ($type == 'video') ? '180px' : (($type == 'music') ? '130px' : '140px'
 	});
 
 
-    /**
+	/**
 	 * Opens the crop window if picture
 	 *
 	 */
-	
 	<?php if ( ! is_null($pictureSize)) :?>
 		if (typeOf($('imageCropLink' + id_media)) != 'null')
 		{
@@ -340,18 +364,100 @@ $margin = ($type == 'video') ? '180px' : (($type == 'music') ? '130px' : '140px'
 		}
 	<?php endif ;?>
 
+	// Navigate to next / previous image
+	function getTabContextIdentifier() {
+		return $('articleTabContent') === null ? 'page' : 'article';
+	}
+
+	function closeEditPopup(mediaID) {
+		$('wmedia' + mediaID + '_controls_button2').fireEvent('click');
+	}
+
+	function findFirstMediaID(mediaID) {
+		var previousID = mediaID;
+		while(previousID != null) {
+			previousID = findPreviousMediaID(mediaID);
+
+			if(previousID != null) {
+				mediaID = previousID;
+			}
+		}
+
+		return mediaID;
+	}
+
+	function findLastMediaID(mediaID) {
+		var lastID = mediaID;
+		while(lastID != null) {
+			lastID = findNextMediaID(mediaID);
+
+			if(lastID != null) {
+				mediaID = lastID;
+			}
+		}
+
+		return mediaID;
+	}
+
+	function findPreviousMediaID(mediaID) {
+		var elCurrent = $$('#' + getTabContextIdentifier() + 'TabContent .picture[data-id="' + mediaID + '"]')[0];
+		var elPrevious = $(elCurrent).getPrevious();
+		return elPrevious ? elPrevious.get('data-id') : null;
+	}
+
+	function findNextMediaID(mediaID) {
+		var elCurrent = $$('#' + getTabContextIdentifier() + 'TabContent .picture[data-id="' + mediaID + '"]')[0];
+		var elNext = $(elCurrent).getNext();
+		return elNext ? elNext.get('data-id') : null;
+	}
+
+	function editMediaByID(mediaID) {
+		if( mediaID != null ) {
+			var anchors = $$('#' + getTabContextIdentifier() + 'TabContent .picture[data-id="' + mediaID + '"] a.edit');
+			if (anchors && anchors.length > 0) {
+				anchors[0].fireEvent('click');
+			}
+		}
+	}
+
+	<?php if($provider == '') : ?>
+
+		$('imagePreviousLink').addEvent('click', function () {
+			var clickedMediaID = parseInt( $('imagePreviousLink').get('data-id'), 10);
+			closeEditPopup(clickedMediaID);
+
+			var previousMediaID = findPreviousMediaID(clickedMediaID);
+			if(previousMediaID != null) {
+				editMediaByID(previousMediaID);
+			} else {
+				editMediaByID(findLastMediaID(clickedMediaID));
+			}
+		});
+
+		$('imageNextLink').addEvent('click', function () {
+			var clickedMediaID = parseInt( $('imagePreviousLink').get('data-id'), 10);
+			closeEditPopup(clickedMediaID);
+
+			var nextMediaID = findNextMediaID(clickedMediaID);
+			if(nextMediaID != null) {
+				editMediaByID(nextMediaID);
+			} else {
+				editMediaByID(findFirstMediaID(clickedMediaID))
+			}
+		});
+
+	<?php endif ;?>
 
 	// Extend Fields
 	var mediaExtendManager<?php echo $id_media; ?> = new ION.ExtendManager({
-		parent: 'media',
-		id_parent: id_media,
-		destination: 'mediaTab' + id_media,
-		destinationTitle: Lang.get('ionize_title_extend_fields'),
-		onLoaded: function(extendManager)
+		parent				: 'media',
+		id_parent			: id_media,
+		destination			: 'mediaTab' + id_media,
+		destinationTitle	: Lang.get('ionize_title_extend_fields'),
+		onLoaded			: function(extendManager)
 		{
 			extendManager.getParentInstances();
 		}
 	});
-
-
+	
 </script>

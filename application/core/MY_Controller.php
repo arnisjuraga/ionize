@@ -39,8 +39,13 @@ class MY_Controller extends CI_Controller
 	 */
 	protected $context_tag = 'ion';
 
-
 	public $xhr_protected = FALSE;
+
+	/** @var  Base_model */
+	public $base_model;
+
+	/** @var  Settings_model */
+	public $settings_model;
 
 	// ------------------------------------------------------------------------
 
@@ -60,14 +65,14 @@ class MY_Controller extends CI_Controller
 			die();
 		}
 
-		$this->load->database();
+/*		$this->load->database();
 
 		if ( ! $this->db->db_select())
 		{
 			$error =& load_class('Exceptions', 'core');
 			echo $error->show_error('Database Error', 'Unable to connect to the specified database : '. $this->db->database, 'error_db');
 			exit;
-		}
+		}*/
 
 		// Models
         $this->load->model(
@@ -79,7 +84,7 @@ class MY_Controller extends CI_Controller
 		// Helpers
 		$this->load->helper('file');
 		$this->load->helper('trace');
-		
+
 		// Get all the website languages from DB and store them into config file "languages" key
 		$languages = $this->settings_model->get_languages();
 		Settings::set_languages($languages);
@@ -386,7 +391,7 @@ class Base_Controller extends MY_Controller
     {
         parent::__construct();
 
-		// $this->output->enable_profiler(TRUE);
+		$this->output->enable_profiler(FALSE);
 		
 		// Libraries
 		$this->load->library('structure');	
@@ -394,9 +399,6 @@ class Base_Controller extends MY_Controller
 
 		// Models
 		$this->load->model('menu_model', '', TRUE);
-
-		// Modules config
-//		$this->get_modules_config();
 
 		// Add path to installed modules
 		$installed_modules = Modules()->get_installed_modules();
@@ -420,6 +422,10 @@ class Base_Controller extends MY_Controller
 			}
 		}
 
+		// Load Theme Events library
+		if (is_file($file = FCPATH . Theme::get_theme_path().'libraries/theme_events.php'))
+			Event::load_event_library($file);
+
 		// Menus
 		Settings::set('menus', $this->menu_model->get_list());
 
@@ -439,6 +445,17 @@ class Base_Controller extends MY_Controller
 			// Store the current lang code (found by Router) to Settings
 			Settings::set('current_lang', config_item('detected_lang_code'));
 		}
+
+		// Check for empty lang URL
+		if ( ! $this->router->is_home())
+		{
+			if ($this->router->get_raw_key() != Settings::get_lang() && (Settings::get('force_lang_urls') OR count($online_lang_codes) > 1))
+			{
+				// redirect(current_url(), 'location', 301);
+				redirect(current_url() . (!empty($_SERVER['QUERY_STRING']) ? '?'.$_SERVER['QUERY_STRING'] : ''), 'location', 301);
+			}
+		}
+
 
 		// Set lang preference cookie
 		$host = @str_replace('www', '', $_SERVER['HTTP_HOST']);
@@ -624,6 +641,8 @@ class MY_Admin extends MY_Controller
     {
         parent::__construct();
 
+		// $this->db->cache_off();
+
 		$this->load->helper('module_helper');
 		
 		// Redirect the not authorized user to the login panel. See /application/config/user.php
@@ -634,7 +653,23 @@ class MY_Admin extends MY_Controller
 			'flash_var' => 'error'
 		);
 
+		if ( ! User()->logged_in() && $this->is_xhr() && $this->uri->uri_string() != '/auth/xhr_login')
+		{
+			header('HTTP/1.0 401 Unauthorized');
+			$response = array(
+				'message' => 'Please login',
+				'type' => 'login'
+			);
+			$this->xhr_output($response);
+			exit();
+		}
+
 		$this->output->enable_profiler(FALSE);
+
+		// Load Theme Events library
+		$user_theme = Settings::get('theme');
+		if (is_file($file = FCPATH . 'themes/'.$user_theme.'/libraries/theme_events.php'))
+			Event::load_event_library($file);
 
 		// Set the admin theme as current theme
 		Theme::set_theme('admin');
@@ -675,14 +710,14 @@ class MY_Admin extends MY_Controller
 		
 		// @TODO : Remove this thing from the global CMS. Not more mandatory, but necessary for compatibility with historical version
 		// Available menus
-		// Each menu was a root node in which you can put several pages, wich are composing a menu.
+		// Each menu was a root node in which you can put several pages, which are composing a menu.
 		// Was never really implemented in ionize historical version, but already used as : menus[0]...
 		Settings::set('menus', config_item('menus'));
 
 		// No cache for backend
-		$this->output->set_header("Cache-Control: no-store, no-cache, must-revalidate");
-		$this->output->set_header("Cache-Control: post-check=0, pre-check=0", FALSE);
-		$this->output->set_header("Pragma: no-cache");
+		$this->output->set_header('Cache-Control: no-store, no-cache, must-revalidate');
+		$this->output->set_header('Cache-Control: post-check=0, pre-check=0', FALSE);
+		$this->output->set_header('Pragma: no-cache');
     }
     
 
@@ -904,6 +939,7 @@ class MY_Admin extends MY_Controller
 					{
 						// Module path
 						$module_path = MODPATH.ucfirst($folder).'/';
+			
 						// Add the module path to the finder
 						array_push(Finder::$paths, $module_path);
 	
@@ -994,6 +1030,10 @@ class MY_Admin extends MY_Controller
 		}
 	}
 
+
+	// ------------------------------------------------------------------------
+
+
 	/**
 	 * Gets List data regarding the pagination
 	 * Prepares data for the template
@@ -1042,8 +1082,11 @@ class MY_Admin extends MY_Controller
 
 // ------------------------------------------------------------------------
 
+
 class MY_Module extends MY_Controller
 {
+	private $_URI_STRING = NULL;
+
 	/**
 	 * Constructor
 	 *
@@ -1082,6 +1125,9 @@ class MY_Module extends MY_Controller
 			// Set the current theme
 			Theme::set_theme(Settings::get('theme'));
 
+			// Load Theme Events library
+			if (is_file($file = FCPATH . Theme::get_theme_path().'libraries/theme_events.php'))
+				Event::load_event_library($file);
 
 			// Static translations
 			$lang_files = array();
@@ -1159,6 +1205,29 @@ class MY_Module extends MY_Controller
 		}
 	}
 
+	public function get_uri_string()
+	{
+		if (is_null($this->_URI_STRING))
+		{
+			$aliases = array();
+			include APPPATH . 'config/modules.php';
+
+			$segments = explode('/', trim($this->uri->uri_string(), '/'));
+
+			$rmodule = array_shift($segments);
+
+			if(in_array($rmodule, array_keys($aliases)))
+			{
+				$rmodule = $aliases[$rmodule];
+			}
+			$this->_URI_STRING = implode('/', array_merge(array($rmodule),$segments));
+		}
+
+		return $this->_URI_STRING;
+	}
+
+
+
 	/**
 	 * Renders one view containing ionize tags
 	 *
@@ -1202,6 +1271,8 @@ abstract class Module_Admin extends MY_Admin
 	 * @var CI_Controller
 	 */
 	protected $parent;
+
+	static public $ci;
 	
 	/**
 	 * Constructor
@@ -1215,6 +1286,8 @@ abstract class Module_Admin extends MY_Admin
 
 		// Set Module's config
 		$ci =& get_instance();
+		self::$ci = $ci;
+
 		$config_items = Modules()->get_module_config($ci->uri->segment(3));
 
 		foreach($config_items as $item => $value)
@@ -1298,4 +1371,30 @@ abstract class Module_Admin extends MY_Admin
 
 		$this->output($args);
 	}
+
+
+	// ------------------------------------------------------------------------
+
+
+	/**
+	 * @param      $view
+	 * @param bool $limit_to_module_folder
+	 */
+	public function output($view, $limit_to_module_folder = TRUE)
+	{
+		// Unique ID, useful for DOM Element displayed in windows.
+		$this->template['UNIQ'] = (uniqid());
+
+		// Loads the view
+		if ($limit_to_module_folder)
+			$output = $this->load->module_view($this->config->item('folder'), $view, $this->template, true);
+		else
+			$output = $this->load->view($view, $this->template, true);
+
+		// Set character encoding
+		$this->output->set_header("Content-Type: text/html; charset=UTF-8");
+
+		$this->output->set_output($output);
+	}
+
 }

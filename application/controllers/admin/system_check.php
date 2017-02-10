@@ -12,6 +12,27 @@
 
 class System_check extends MY_admin
 {
+	/** @var  System_check_model */
+	public $system_check_model;
+
+	/** @var  Menu_model */
+	public $menu_model;
+
+	/** @var  Page_model */
+	public $page_model;
+
+	/** @var  Article_model */
+	public $article_model;
+
+	/** @var  Media_model */
+	public $media_model;
+
+	/** @var  Config_model */
+	public $config_model;
+
+	/** @var  Url_model */
+	public $url_model;
+	
 	/**
 	 * Constructor
 	 *
@@ -159,7 +180,7 @@ class System_check extends MY_admin
 
 	/**
 	 * Check page level integrity
-	 * Checks the page level inegrity, correct and chains the next check : article's contexts
+	 * Checks the page level integrity, correct and chains the next check : article's contexts
 	 *
 	 */
 	public function check_page_level()
@@ -352,19 +373,54 @@ class System_check extends MY_admin
 	 * Rebuilds the pages URLs
 	 *
 	 */
+	public function rebuild_sitemap()
+	{
+		$this->structure->build_multilingual_sitemap(TRUE);
+
+		$result = array(
+			'title' => lang('ionize_title_rebuild_sitemap_done'),
+			'status' => 'success',
+			'message' => lang('ionize_message_check_ok'),
+		);
+		
+		$this->xhr_output($result);
+	}
+
+
+	/**
+	 * Rebuilds the pages URLs
+	 *
+	 */
 	public function rebuild_urls()
 	{
 		$this->url_model->clean_table();
 
 		$nb = $this->page_model->rebuild_urls();
 		$this->url_model->delete_empty_urls();
-		
+
 		$result = array(
 			'title' => lang('ionize_title_rebuild_pages_urls'),
 			'status' => 'success',
 			'message' => lang('ionize_message_check_ok'),
 		);
-		
+
+		$this->xhr_output($result);
+	}
+
+	/**
+	 * Remove deleted page records and relations to it from DB.
+	 *
+	 * @return	int		Amount of deleted pages that have been removed
+	 */
+	public function remove_deleted_pages()
+	{
+		$this->page_model->remove_deleted_pages();
+
+		$result = array(
+			'status' => 'success',
+			'message' => lang('ionize_message_check_ok'),
+		);
+
 		$this->xhr_output($result);
 	}
 

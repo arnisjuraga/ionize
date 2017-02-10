@@ -270,7 +270,7 @@ class Modules extends MY_admin
 			// Create tables
 			foreach ($tables as $sql)
 			{
-				if ( ! $this->db->simple_query($sql))
+				if ( ! $this->db->simple_query((string) $sql))
 				{
 					$errors[] = $sql;
 				}
@@ -279,7 +279,7 @@ class Modules extends MY_admin
 			// Add content
 			foreach ($content as $sql)
 			{
-				$this->db->simple_query($sql);
+				$this->db->simple_query((string) $sql);
 			}
 		}
 
@@ -314,5 +314,15 @@ class Modules extends MY_admin
 			return TRUE;
 
 		return FALSE;
+	}
+
+
+	public function get_config()
+	{
+		$module = $this->input->post('module');
+
+		$config = Modules()->get_module_config(ucfirst($module));
+
+		$this->xhr_output($config);
 	}
 }

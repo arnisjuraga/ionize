@@ -97,27 +97,27 @@ class FTL_Context
 		// key is a tag name
 		
 		// Fast and nice (currently only up to 5 segment tags):
-		if($c == 2)
-		{
-			$this->tree[$l[1]][$l[0]]['#'] = $name;
-		}
-		elseif($c == 3)
-		{
-			$this->tree[$l[2]][$l[1]][$l[0]]['#'] = $name;
-		}
-		elseif($c == 4)
-		{
-			$this->tree[$l[3]][$l[2]][$l[1]][$l[0]]['#'] = $name;
-		}
-		elseif($c == 5)
-		{
-			$this->tree[$l[4]][$l[3]][$l[2]][$l[1]][$l[0]]['#'] = $name;
-		}
-		
-		elseif($c == 6)
-		{
-			$this->tree[$l[5]][$l[4]][$l[3]][$l[2]][$l[1]][$l[0]]['#'] = $name;
-		}
+		switch($c) {
+        		case 2:
+                		$this->tree[$l[1]][$l[0]]['#'] = $name;
+                		break;
+
+            		case 3:
+                		$this->tree[$l[2]][$l[1]][$l[0]]['#'] = $name;
+                		break;
+
+            		case 4:
+                		$this->tree[$l[3]][$l[2]][$l[1]][$l[0]]['#'] = $name;
+                		break;
+
+            		case 5:
+                		$this->tree[$l[4]][$l[3]][$l[2]][$l[1]][$l[0]]['#'] = $name;
+                		break;
+
+            		case 6:
+                		$this->tree[$l[5]][$l[4]][$l[3]][$l[2]][$l[1]][$l[0]]['#'] = $name;
+                		break;
+        	}
 
 		// TODO: To support more segments, add more rows like this
 	}
@@ -291,12 +291,9 @@ class FTL_Context
 	 */
 	public function tag_missing($name, $args = array(), $block = NULL)
 	{
-		// trigger_error('Name: "'.$name.'", scope: "'.$this->current_nesting().'".');
-		// show_error('Tag missing: "'.$name.'", scope: "'.$this->current_nesting().'".');
-		// throw new Exception('Tag missing: "'.$name.'", scope: "'.$this->current_nesting().'".');
-
 		// Config item from CI
 		$log_threshold = config_item('log_threshold');
+
 		if ($log_threshold)
 		{
 			$title = 'Tag missing';

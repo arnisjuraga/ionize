@@ -46,12 +46,13 @@ class MY_Email extends CI_Email
 					$email = isset($data['email']) ? $data['email'] : self::$ci->input->post('email');
 					break;
 
-				case ($email == 'contact' || $email == 'technical' || $email == 'info'):
+				case 'contact':
+				case 'technical':
+				case 'info':
 					$email = (Settings::get('email_'.$email) != '') ? Settings::get('email_'.$email) : NULL;
 					break;
 
 				default:
-					$email = $email;
 					$_email = explode('::', $email);
 					if( ! empty($_email[1]) )
 						$email = self::$ci->input->post($_email[1]);
@@ -111,5 +112,65 @@ class MY_Email extends CI_Email
 				log_message('error', 'Error : MY_Email::send_form_emails() : Email not found : ' . $asked_email . '. Set it in the ionize backend !');
 			}
 		}
+	}
+
+
+	/**
+	 * @param string $type			'information', 'alert', 'success', 'error'
+	 * @param string $subject
+	 * @param null $to_email
+	 * @param null $view
+	 * @param array $data			array(
+	 * 									'title' => 'Email Title in message',
+	 * 									'message' => 'The message',
+	 *									'data' => array(
+	 *												'key_1' => 'Text'
+	 *									)
+	 *								)
+	 */
+	public function send_system($type='information', $subject='Information', $to_email=NULL, $view=NULL, $data=array())
+	{
+		$this->clear();
+
+		// Subject / From / To
+		$this->subject($subject);
+		$this->from(Settings::get('site_email'), Settings::get('site_title'));
+		$this->to($to_email);
+
+		$view_content = $this->get_system_email_content($type, $subject, $view, $data);
+
+		if ( ! is_null($view_content))
+		{
+			$this->message($view_content);
+
+			// Send silently
+			$result = @$this->send();
+
+			if ( ! $result)
+			{
+				log_message('error', 'Error : MY_Email::send_system() : Email was not sent');
+			}
+		}
+	}
+
+
+	public function get_system_email_content($type='information', $subject='Information', $view=NULL, $data=array())
+	{
+		$view_content = NULL;
+
+		if(is_null($view)) $view = 'mail/system/system';
+
+		if ( ! is_null($view))
+		{
+			if ( ! isset($data['type'])) $data['type'] = $type;
+			if ( ! isset($data['subject'])) $data['subject'] = $subject;
+
+			// View & Message content
+			$view_content = self::$ci->load->view($view, $data, TRUE);
+		}
+		else
+			log_message('error', 'Error : MY_Email::send_system() : Incorrect view');
+
+		return $view_content;
 	}
 }

@@ -5,7 +5,6 @@
  */
 
 $thumb_size = (Settings::get('media_thumb_size') != '') ? Settings::get('media_thumb_size') : '120';
-
 $filter = implode(',', $filter);
 
 ?>
@@ -49,7 +48,7 @@ $filter = implode(',', $filter);
 					<?php if(Authority::can('delete', 'admin/medialist')) :?>
 						<a class="icon remove right" title="<?php echo lang('ionize_label_remove_media'); ?>" data-id="<?php echo $id; ?>"></a>
 					<?php endif ;?>
-					<a title="<?php echo $id ?> : <?php echo $media['path'] ?>" class="icon info right mr5"></a>
+					<a title="<?php echo $id ?>: <?php echo $media['path'] ?>" class="icon info right mr5"></a>
 					<?php if ( ! empty($media['article_paths'])) :?>
 						<a title="<?php echo $media['article_paths'] ?>" class="icon right article mr5"></a>
 					<?php endif ;?>
@@ -64,9 +63,7 @@ $filter = implode(',', $filter);
 						<div class="picture">
 							<div class="thumb" style="width:<?php echo $thumb_size; ?>px;height:<?php echo $thumb_size; ?>px; background-image:url(<?php echo admin_url(TRUE) . 'media/get_thumb/'.$media['id_media'].'/'.time() ; ?>);"></div>
 						</div>
-					<?php endif ;?>
-
-					<?php if ($media['type'] == 'video') :?>
+					<?php elseif ($media['type'] == 'video') :?>
 						<?php if($media['provider'] != '') :?>
 
 							<iframe width="150" height="130" class="mt20" src="<?php echo $media['path'] ?>" frameborder="0"></iframe>
@@ -92,9 +89,7 @@ $filter = implode(',', $filter);
 
 					<?php if ($media['type'] == 'music') :?>
 						<div class="ui360 ui360-vis"><a class="sound" id="sound<?php echo $id ?>" href="<?php echo base_url().$media['path'] ?>" target="_blank"><?php echo $media['file_name'] ?></a></div>
-					<?php endif ;?>
-
-					<?php if ($media['type'] == 'file') :?>
+					<?php elseif ($media['type'] == 'file') :?>
 						<div class="pt50"><?php echo $media['path'] ?></div>
 					<?php endif ;?>
 				</div>
@@ -227,7 +222,7 @@ $filter = implode(',', $filter);
 		});
 	});
 
-	// Display mode : Cards or List
+	// Display mode: Cards or List
 	var medialistView = Cookie.read('medialistView');
 	if (medialistView == 'list') $('btnMedialistViewList').click();
 

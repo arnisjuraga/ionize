@@ -111,7 +111,7 @@ class FTL_Binding
 	 */
 	public function is_single()
 	{
-		return $this->block == NULL;
+		return $this->block === NULL;
 	}
 	
 	/**
@@ -174,7 +174,6 @@ class FTL_Binding
 		return $this->process_tag;
 	}
 
-
 	/**
 	 * Returns the tag's name
 	 *
@@ -183,7 +182,6 @@ class FTL_Binding
 	{
 		return $this->name;
 	}
-
 
 	/**
 	 * Return all the attributes of the tag
@@ -228,10 +226,13 @@ class FTL_Binding
 		if ( ! isset($this->attr[$attr]))
 			return $return_if_null;
 		
-		if (isset($this->attr[$attr]) && strtolower($this->attr[$attr]) == 'true')
-			return TRUE;
-		
-		return (isset($this->attr[$attr]) && strtolower($this->attr[$attr]) != 'false') ? $this->attr[$attr] : FALSE;
+		if (is_string($this->attr[$attr])) {
+			$attrLower = strtolower($this->attr[$attr]);
+			if( $attrLower === 'true' ) return TRUE;
+			if( $attrLower === 'false' ) return FALSE;
+		}
+
+		return $this->attr[$attr];
 	}
 
 	/**
@@ -250,7 +251,6 @@ class FTL_Binding
 		return $this;
 	}
 
-
 	public function removeAttribute($key)
 	{
 		if (isset($this->attr[$key]))
@@ -258,7 +258,6 @@ class FTL_Binding
 
 		return $this;
 	}
-
 
 	public function removeAttributes($attrs)
 	{
@@ -269,10 +268,6 @@ class FTL_Binding
 
 		return $this;
 	}
-
-
-
-
 
 	/**
 	 * Return the current FTL_Binding parent
@@ -296,12 +291,12 @@ class FTL_Binding
 			while ( ! empty($nesting))
 			{
 				$last = array_pop($nesting);
-				if ($last == $this->name)
+				if ($last === $this->name)
 				{
 					break;
 				}
 			}
-			$parent_name = ! empty($nesting) ? array_pop($nesting) : NULL;
+			$parent_name = empty($nesting) ? NULL : array_pop($nesting);
 		}
 
 		// We're supposed to have one parent name
@@ -314,9 +309,9 @@ class FTL_Binding
 			{
 				array_shift($stack);
 
-				if ($binding->name == $parent_name)
+				if ($binding->name === $parent_name)
 				{
-					if ($all == FALSE && $binding->isProcessTag() == TRUE && count($stack) > 2)
+					if ($all === FALSE && $binding->isProcessTag() === TRUE && count($stack) > 2)
 					{
 						$parent = $binding->getParent(NULL, FALSE);
 					}
@@ -332,7 +327,6 @@ class FTL_Binding
 
 		return $parent;
 	}
-
 
 	/**
 	 * @param $parent_name
@@ -390,16 +384,15 @@ class FTL_Binding
 		while ( ! empty($nesting))
 		{
 			$last = array_pop($nesting);
-			if ($last == $this->name)
+			if ($last === $this->name)
 			{
 				break;
 			}
 		}
 
-		if ( ! empty($nesting))
-			return array_pop($nesting);
-
-		return NULL;
+		return (empty($nesting))
+			? NULL 
+			: array_pop($nesting);
 	}
 
 	/**
@@ -413,10 +406,9 @@ class FTL_Binding
 	{
 		$parent = $this->getParent($parent_name);
 
-		if ($parent)
-			return $parent->getAttribute($attribute);
-
-		return NULL;
+		return ($parent)
+			? $parent->getAttribute($attribute)
+			: NULL;
 	}
 
 	/**
@@ -441,7 +433,7 @@ class FTL_Binding
 	{
 		$tag_name = $this->getName();
 
-		return $data = $this->get($tag_name);
+		return $this->get($tag_name);
 	}
 
 
@@ -471,6 +463,20 @@ class FTL_Binding
 		if (is_null($key))
 			$key = $this->name;
 
+		$data_array = $this->getDataArray($data_array_name);
+
+		if (is_array($data_array) && isset($data_array[$key]))
+		{
+			// ensure single quotes do not break parser eval
+			return str_replace('\'', '&#39;', $data_array[$key]);
+		}
+
+		return NULL;
+	}
+
+
+	public function getDataArray($data_array_name = NULL)
+	{
 		if (is_null($data_array_name))
 		{
 			$data_array_name = $this->getAttribute('from');
@@ -479,19 +485,20 @@ class FTL_Binding
 				$data_array_name = $this->getDataParentName();
 		}
 
-		if ( ! is_null($key) && ! is_null($data_array_name))
+		if ( ! is_null($data_array_name))
 		{
 			$data_array = $this->get($data_array_name);
 
 			if (is_null($data_array))
 				$data_array = $this->get('data');
 
-			if (is_array($data_array) && isset($data_array[$key]))
-				return $data_array[$key];
+			if (is_array($data_array))
+				return $data_array;
 		}
 
 		return NULL;
 	}
+
 
 	/**
 	 * Returns one local var
@@ -503,10 +510,9 @@ class FTL_Binding
 	 */
 	public function get($key, $scope='local')
 	{
-		if ($scope == 'global')
-			return $this->globals->{$key};
-		else
-			return $this->locals->{$key};
+		return $scope === 'global'
+			? $this->globals->{$key}
+			: $this->locals->{$key};
 	}
 	
 	/**
@@ -520,7 +526,7 @@ class FTL_Binding
 	 */
 	public function set($key, $value, $scope='local')
 	{
-		if ($scope == 'global')
+		if ($scope === 'global')
 			$this->globals->{$key} = $value;
 		else
 			$this->locals->{$key} = $value;
@@ -587,7 +593,7 @@ class FTL_Binding
 			'php_data' => $php_data
 		));
 
-		$str = $parser->parse($string, $php_data);
+		$str = $parser->parse($string, $php_data); //@todo check: code smell - $php_data is not used by parse() method
 		
 		// reset
 		$this->context->parser = $tmp;

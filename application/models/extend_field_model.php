@@ -31,6 +31,10 @@ class Extend_field_model extends Base_model
 	private static $_CONTEXT_TABLE = 'extend_field_context';
 	private static $_TYPE_TABLE = 'extend_field_type';
 
+
+	private $_extend_field_definitions = NULL;
+
+
 	/**
 	 * Constructor
 	 *
@@ -56,6 +60,26 @@ class Extend_field_model extends Base_model
 	// ------------------------------------------------------------------------
 
 
+	public function get_definitions()
+	{
+		if ( is_null($this->_extend_field_definitions))
+		{
+			$where['order_by'] = 'ordering ASC';
+
+			$this->{$this->db_group}->select($this->get_table() . '.*');
+
+			$this->_join_to_extend_types();
+
+			$this->_extend_field_definitions = parent::get_list($where);
+		}
+
+		return $this->_extend_field_definitions;
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
 	public function get_types()
 	{
 		$query = $this->{$this->db_group}->get(self::$_TYPE_TABLE);
@@ -72,6 +96,20 @@ class Extend_field_model extends Base_model
 	{
 		$parents = self::$parents;
 
+		$modules = Modules()->get_installed_modules();
+
+		foreach($modules as $module)
+		{
+			if ( ! empty($module['extends']))
+			{
+				foreach($module['extends'] as $extend_code)
+				{
+					if ( ! in_array($extend_code, $parents))
+						$parents[] = $extend_code;
+				}
+			}
+		}
+
 		// Add parents found in extend table
 		$this->{$this->db_group}->select('parent');
 		$this->{$this->db_group}->distinct();
@@ -84,6 +122,7 @@ class Extend_field_model extends Base_model
 			if ( ! in_array($row['parent'], $parents))
 				$parents[] = $row['parent'];
 		}
+
 
 		return $parents;
 	}
@@ -119,9 +158,37 @@ class Extend_field_model extends Base_model
 		$list = parent::get_list($where);
 
 		// Add languages definition on each field
-		foreach($list as &$field)
+		$lang_data = parent::get_list(array(), $this->get_lang_table());
+		$fields = $this->list_fields($this->get_lang_table());
+		$fields_data = $this->field_data($this->get_lang_table());
+
+		$extend_lang_data = array();
+		foreach($lang_data as $d)
 		{
-			$field['lang_definition'] = $this->get_lang(array('id_extend_field'=>$field['id_extend_field']));
+			$extend_lang_data[$d['id_extend_field']][$d['lang']] = $d;
+		}
+
+		foreach($list as &$extend)
+		{
+			$extend['lang_definition'] = array();
+
+			foreach(Settings::get_languages() as $language)
+			{
+				$lang = $language['lang'];
+
+				if ( ! empty($extend_lang_data[$d['id_extend_field']][$lang]))
+					$extend['lang_definition'][$lang] = $extend_lang_data[$d['id_extend_field']][$lang];
+				else
+				{
+					foreach ($fields as $field)
+					{
+						$field_data = array_values(array_filter($fields_data, create_function('$row', 'return $row["field"] == "'. $field .'";')));
+						$field_data = (isset($field_data[0])) ? $field_data[0] : FALSE;
+
+						$extend['lang_definition'][$lang][$field] = (isset($field_data['default'])) ? $field_data['default'] : '';
+					}
+				}
+			}
 		}
 
 		return $list;
@@ -245,7 +312,7 @@ class Extend_field_model extends Base_model
 
 		// Prepare before filling with data
 		$langs = Settings::get_languages();
-		$instance_fields = $this->{$this->db_group}->list_fields($this->instances_table);
+		$instance_fields = $this->list_fields($this->instances_table);
 
 		foreach($definitions as &$field)
 		{
@@ -351,7 +418,7 @@ class Extend_field_model extends Base_model
 		$langs = Settings::get_languages();
 
 		// Instances table columns
-		$fields_columns = $this->{$this->db_group}->list_fields($this->instances_table);
+		$fields_columns = $this->list_fields($this->instances_table);
 
 		foreach($definitions as $k => &$extend_field)
 		{
@@ -488,95 +555,95 @@ class Extend_field_model extends Base_model
 				$in_types = "'" . implode("','", $types['article']) . "'";
 
 				$sql = "
-					select
-						'article' as type,
-						page_article.id_page as id_parent,
-						article.id_article as id_entity,
-						page_lang.title as parent_title,
+					SELECT
+						'article' AS type,
+						page_article.id_page AS id_parent,
+						article.id_article AS id_entity,
+						page_lang.title AS parent_title,
 						article_lang.title,
 						article_lang.subtitle,
 						article_lang.content,
 						page_article.online,
 						page_article.link_type,
 						page_article.link_id,
-						url.path as entity_url,
-						page_article.link_type as target_type,
-						IF (page_article.link_type = 'page', page_lang_target.online, article_lang_target.online) as target_online,
-						url_target.path as target_url,
-						COALESCE(article_lang_target.title, page_lang_target.title) as target_title,
-						COALESCE(article_lang_target.subtitle, page_lang_target.subtitle) as target_subtitle,
-						article_lang_target.content as target_content
+						url.path AS entity_url,
+						page_article.link_type AS target_type,
+						IF (page_article.link_type = 'page', page_lang_target.online, article_lang_target.online) AS target_online,
+						url_target.path AS target_url,
+						COALESCE(article_lang_target.title, page_lang_target.title) AS target_title,
+						COALESCE(article_lang_target.subtitle, page_lang_target.subtitle) AS target_subtitle,
+						article_lang_target.content AS target_content
 
-					from article
-						join article_lang on article_lang.id_article = article.id_article and lang='".$lang."'
-						join page_article on
+					FROM article
+						JOIN article_lang ON article_lang.id_article = article.id_article AND lang='".$lang."'
+						JOIN page_article ON
 						(
 							page_article.id_article = article.id_article
-							and concat(page_article.id_page, '.', page_article.id_article) in (".$in_types.")
+							AND concat(page_article.id_page, '.', page_article.id_article) IN (".$in_types.")
 						)
-						left join page_lang
-							on page_lang.id_page = page_article.id_page and page_lang.lang = '".$lang."'
-						left join url
-							on url.type='article' and url.id_entity = page_article.id_article and url.active=1 and url.lang ='".$lang."'
-						left join url as url_target on
+						LEFT JOIN page_lang
+							ON page_lang.id_page = page_article.id_page AND page_lang.lang = '".$lang."'
+						LEFT JOIN url
+							ON url.type='article' AND url.id_entity = page_article.id_article AND url.active=1 AND url.lang ='".$lang."'
+						LEFT JOIN url AS url_target ON
 						(
 							url_target.type = page_article.link_type
-							and url_target.id_entity = (if(LOCATE('.', page_article.link_id)>0, SUBSTRING(page_article.link_id, LOCATE('.', page_article.link_id)+1), page_article.link_id))
-							and url_target.active=1
-							and url_target.lang ='".$lang."'
+							AND url_target.id_entity = (if(LOCATE('.', page_article.link_id)>0, SUBSTRING(page_article.link_id, LOCATE('.', page_article.link_id)+1), page_article.link_id))
+							AND url_target.active=1
+							AND url_target.lang ='".$lang."'
 						)
-						left join page_lang as page_lang_target
-							on page_lang_target.id_page = url_target.id_entity and url_target.type='page' and page_lang_target.lang ='".$lang."'
-						left join article_lang as article_lang_target
-							on article_lang_target.id_article = url_target.id_entity and url_target.type='article' and article_lang_target.lang='".$lang."'
+						LEFT JOIN page_lang AS page_lang_target
+							ON page_lang_target.id_page = url_target.id_entity AND url_target.type='page' AND page_lang_target.lang ='".$lang."'
+						LEFT JOIN article_lang AS article_lang_target
+							ON article_lang_target.id_article = url_target.id_entity AND url_target.type='article' AND article_lang_target.lang='".$lang."'
 				";
 			}
 
 			if ( ! empty($types['page']))
 			{
-				$in_types = implode(",", $types['page']);
+				$in_types = implode(',', $types['page']);
 
 				if ( ! empty($sql))
 				{
-					$sql .= " union ";
+					$sql .= ' UNION ';
 				}
 
 				$sql .= "
-					select
+					SELECT
 						'page' as type,
-						NULL as id_parent,
-						page.id_page as id_entity,
-						NULL as parent_title,
+						NULL AS id_parent,
+						page.id_page AS id_entity,
+						NULL AS parent_title,
 						page_lang.title,
 						page_lang.subtitle,
-						NULL as content,
+						NULL AS content,
 						page_lang.online,
 						page.link_type,
 						page.link_id,
-						url.path as entity_url,
-						page.link_type as target_type,
-						IF (page.link_type = 'page', page_lang_target.online, article_lang_target.online) as target_online,
-						url_target.path as target_url,
-						COALESCE(article_lang_target.title, page_lang_target.title) as target_title,
-						COALESCE(article_lang_target.subtitle, page_lang_target.subtitle) as target_subtitle,
-						article_lang_target.content as target_content
-					from page
-						left join page_lang on page_lang.id_page = page.id_page and lang='".$lang."'
-						left join url on url.type = 'page' and url.id_entity = page.id_page and url.active=1 and url.lang ='".$lang."'
-						left join url as url_target on
+						url.path AS entity_url,
+						page.link_type AS target_type,
+						IF (page.link_type = 'page', page_lang_target.online, article_lang_target.online) AS target_online,
+						url_target.path AS target_url,
+						COALESCE(article_lang_target.title, page_lang_target.title) AS target_title,
+						COALESCE(article_lang_target.subtitle, page_lang_target.subtitle) AS target_subtitle,
+						article_lang_target.content AS target_content
+					FROM page
+						LEFT JOIN page_lang ON page_lang.id_page = page.id_page AND lang='".$lang."'
+						LEFT JOIN url ON url.type = 'page' AND url.id_entity = page.id_page AND url.active=1 AND url.lang ='".$lang."'
+						LEFT JOIN url AS url_target ON
 						(
 							url_target.type = page.link_type
-							and url_target.id_entity = (if(LOCATE('.', page.link_id)>0, SUBSTRING(page.link_id, LOCATE('.', page.link_id)+1), page.link_id))
-							and url_target.active=1 and url_target.lang ='".$lang."'
+							AND url_target.id_entity = (if(LOCATE('.', page.link_id)>0, SUBSTRING(page.link_id, LOCATE('.', page.link_id)+1), page.link_id))
+							AND url_target.active=1 AND url_target.lang ='".$lang."'
 						)
-						left join page_lang as page_lang_target
-							on page_lang_target.id_page = url_target.id_entity and url_target.type='page' and page_lang_target.lang ='".$lang."'
-						left join article_lang as article_lang_target
-							on article_lang_target.id_article = url_target.id_entity and url_target.type='article' and article_lang_target.lang='".$lang."'
+						LEFT JOIN page_lang AS page_lang_target
+							ON page_lang_target.id_page = url_target.id_entity AND url_target.type='page' AND page_lang_target.lang ='".$lang."'
+						LEFT JOIN article_lang as article_lang_target
+							ON article_lang_target.id_article = url_target.id_entity AND url_target.type='article' AND article_lang_target.lang='".$lang."'
 
-					where
-						page.id_page in (".$in_types.")
-				";
+					WHERE
+						page.id_page in (".$in_types.')
+				';
 			}
 
 			if ( ! empty($sql))
@@ -655,109 +722,6 @@ class Extend_field_model extends Base_model
 	}
 
 
-	public function get_extend_link_list_bck($id_extend, $parent, $id_parent, $lang=NULL, $where=array())
-	{
-		$data = array();
-
-		if ( ! $lang) $lang=NULL;
-
-		$extend = $this->get_element_extend_field($id_extend, $parent, $id_parent, $lang);
-
-		if ( ! empty($extend))
-		{
-			$values = strlen($extend['content']) > 0 ? explode(',', $extend['content']) : NULL;
-
-			$types = array();
-
-			if ( ! empty($values))
-			{
-				// Try to find entities (pages, articles)
-				foreach($values as $val)
-				{
-					$arr = explode(':', $val);
-
-					if ( ! empty($arr[1]))
-					{
-						if ( ! isset($types[$arr[0]])) $types[$arr[0]] = array();
-
-						$types[$arr[0]][] = array_pop(explode('.', $arr[1]));
-					}
-				}
-
-				if ( ! empty($types))
-				{
-					if (is_null($lang)) $lang = Settings::get_lang('default');
-
-					$types_names = array_keys($types);
-					$sql = "
-						select
-							COALESCE(" . implode('_lang.title,', $types_names) . '_lang.title' . ") as title,
-							url.id_entity,
-							url.type,
-							url.full_path_ids,
-							url.path,
-							REPLACE(url.full_path_ids, '/', '.' ) as rel
-						from url
-					";
-
-					$join = "";
-					$where_arr = array();
-
-					foreach($types as $type => $entities)
-					{
-						$join .= "
-							left join ".$type." on (".$type.".id_".$type." = url.id_entity and url.type = '".$type."')
-							left join ".$type."_lang on ".$type."_lang.id_".$type." = ".$type.".id_".$type." and ".$type."_lang.lang = '".$lang."'
-						";
-
-						$where_arr[] = "(type='".$type."' and id_entity in (" . implode(',', $entities). "))";
-					}
-
-					$sql .= $join;
-					$sql .= "where (" . implode(' or ', $where_arr) . ")";
-					$sql .= "
-						and url.lang = '".$lang."'
-						and active = 1
-					";
-
-					if ( ! empty($where))
-					{
-						if ( ! empty($where['limit']))
-							$sql .= " limit " . intval($where['limit']);
-					}
-
-					$query = $this->{$this->db_group}->query($sql);
-
-					if ( $query->num_rows() > 0) $data = $query->result_array();
-					$query->free_result();
-
-
-					// Rebuild Original data
-					foreach($data as $key => $row)
-					{
-						$rel = explode('.', $row['rel']);
-						if ($row['type'] == 'article')
-							$rel = array_slice($rel, -2);
-						else
-							$rel = array_slice($rel, -1);
-
-						$data[$key]['id'] = implode('.', $rel);
-						$data[$key]['extend_value'] = $row['type'] . ':' . $data[$key]['id'];
-					}
-				}
-
-				// So, we got the title of the entity, and the URL of the entity which has an URL in the URL table
-				// But, the original entity can have a link to something else
-
-
-
-			}
-		}
-
-		return $data;
-	}
-
-
 	// ------------------------------------------------------------------------
 
 
@@ -765,11 +729,14 @@ class Extend_field_model extends Base_model
 	 * Saves one parent's extend fields data
 	 * All extend fields values are saved by this method
 	 *
-	 * @param $parent		Parent type
-	 * @param $id_parent	Current parent element ID. Can be the page ID, the article ID...
-	 * @param $post			$_POST data array
+	 * @param string		$parent		Parent type
+	 * @param int			$id_parent	Current parent element ID. Can be the page ID, the article ID...
+	 * @param array			$post		$_POST data array
+	 * @param bool			$by_id 		If set to TRUE, each form input has the ID of the extend set. (old good way)
+	 *									If false, the passed array contains extends names as keys
+	 *
 	 */
-	public function save_data($parent, $id_parent, $post)
+	public function save_data($parent, $id_parent, $post, $by_id = true)
 	{
 		// Get all extends fields with this element OR kind of parent
 		$extend_fields = (!empty($post['id_element_definition'])) ? $this->get_list(array('id_element_definition' => $post['id_element_definition'])) : $this->get_list(array('parent' => $parent));
@@ -781,7 +748,7 @@ class Extend_field_model extends Base_model
 			// Link between extend_field and the current parent
 			$where = array(
 				$this->get_pk_name() => $id_extend,
-				'id_parent' => $id_parent,
+				'id_parent' => empty($id_parent) ? '0' : $id_parent,
 				'parent' => $parent
 			);
 			
@@ -806,28 +773,58 @@ class Extend_field_model extends Base_model
 			}
 
 			// Get the value from _POST values and feed the data array
-			foreach ($post as $k => $value)
+			if ($by_id)
 			{
-				if (substr($k, 0, 2) == 'cf')
+				foreach ($post as $k => $value)
 				{
-					// id of the extend field
-					$key = explode('_', $k);
-
-					if (isset($key[1]) && $key[1] == $id_extend)
+					if (substr($k, 0, 2) == 'cf')
 					{
-						// if language code is set, use it in the query
-						$lang=NULL;
+						// id of the extend field
+						$key = explode('_', $k);
 
-						if (isset($key[2]))
-							$lang = $key[2];
-
-						// Save Extend field data
-						$this->save_extend_field_value($id_extend, $parent, $id_parent, $value, $lang);
-
-						// Save in other field
-						if ( ! empty($extend_field['copy_in']))
+						if (isset($key[1]) && $key[1] == $id_extend)
 						{
-							$this->copy_extend_value_to_field($extend_field, $parent, $id_parent, $value, $lang);
+							// if language code is set, use it in the query
+							$lang=NULL;
+
+							if (isset($key[2]))
+								$lang = $key[2];
+
+							// Save Extend field data
+							$this->save_extend_field_value($id_extend, $parent, $id_parent, $value, $lang);
+
+							// Save in other field
+						// @deprecated
+							/*
+						 * @deprecated
+						 *
+							if ( ! empty($extend_field['copy_in']))
+							{
+								$this->copy_extend_value_to_field($extend_field, $parent, $id_parent, $value, $lang);
+							}
+							*/
+						}
+					}
+				}
+			}
+			else
+			{
+				// Check the post
+				foreach ($post as $name => $value)
+				{
+					if ($extend_field['name'] == $name)
+					{
+						// Lang array ?
+						if (is_array($value))
+						{
+							foreach($value as $lang => $lang_val)
+							{
+								$this->save_extend_field_value($id_extend, $parent, $id_parent, $lang_val, $lang);
+							}
+						}
+						else
+						{
+							$this->save_extend_field_value($id_extend, $parent, $id_parent, $value);
 						}
 					}
 				}
@@ -884,6 +881,46 @@ class Extend_field_model extends Base_model
 	// ------------------------------------------------------------------------
 
 
+	public function delete_extend_field($id_extend_field)
+	{
+		try
+		{
+			if (Event::has_listeners('Extend.field.delete.before'))
+			{
+				// Listeners must throw one Exception if the item cannot be deleted
+				Event::fire('Extend.field.delete.before', $id_extend_field);
+			}
+
+			// Begin transaction
+			$this->{$this->db_group}->trans_start();
+
+			// Definition
+			parent::delete(array('id_extend_field'=>$id_extend_field), 'extend_field');
+
+			// Lang
+			parent::delete(array('id_extend_field'=>$id_extend_field), 'extend_field_lang');
+
+			// Instances
+			$this->delete_extend_fields($id_extend_field);
+
+			// Context
+			// parent::delete(array('id_extend_field'=>$id_extend_field), 'extend_field_context');
+
+			// Transaction complete
+			$this->{$this->db_group}->trans_complete();
+
+			return $this->{$this->db_group}->trans_status();
+		}
+		catch(Exception $e)
+		{
+			throw new Exception($e->getMessage());
+		}
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
 	/**
 	 * Removes one value from one multiple values extend field
 	 * Values are coma separated in DB
@@ -917,6 +954,18 @@ class Extend_field_model extends Base_model
 	// ------------------------------------------------------------------------
 
 
+	public function save($data, $dataLang = array())
+	{
+		if (isset($data['id_parent']) && empty($data['id_parent']))
+			$data['id_parent'] = '0';
+
+		return parent::save($data, $dataLang);
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
 	/**
 	 * Save one extend field value
 	 *
@@ -939,6 +988,12 @@ class Extend_field_model extends Base_model
 
 		// Date or Datetime
 		if (in_array($extend_field['html_element_type'], array('date', 'datetime'))) $value = str_replace('.', '-', $value);
+
+		// Select, Checkbox, Multi Select values : Clean white spaces
+		if (in_array($extend_field['html_element_type'], array('select', 'checkbox', 'radio', 'select-multiple')))
+		{
+			$value = preg_replace('/\s*,\s*/', ',', $value);
+		}
 
 		$data = array(
 			$this->get_pk_name() => $id_extend,
@@ -1031,10 +1086,12 @@ class Extend_field_model extends Base_model
 	// ------------------------------------------------------------------------
 
 
-	public function get_context_list($context, $id_context = NULL, $parent = NULL, $id_parent = NULL)
+	public function get_context_list($context, $id_context = NULL, $parent = NULL, $id_parent = NULL, $id_extend_field_type=NULL)
 	{
-		$where = array('context' => $context);
-		if ( ! empty($id_context)) $where['id_context'] = $id_context;
+		$where = array(
+			'order_by' => 'ordering ASC'
+		);
+
 		if ( ! empty($parent)) $where['parent'] = $parent;
 		if ( ! empty($id_parent)) $where['id_parent'] = $id_parent;
 
@@ -1049,7 +1106,7 @@ class Extend_field_model extends Base_model
 		);
 
 		// Add Extend Type info
-		$this->_join_to_extend_types();
+		$this->_join_to_extend_types($id_extend_field_type);
 
 		// Context
 		$this->{$this->db_group}->select(
@@ -1057,14 +1114,7 @@ class Extend_field_model extends Base_model
 			.self::$_CONTEXT_TABLE . '.id_context'
 		);
 
-		$this->{$this->db_group}->join(
-			self::$_CONTEXT_TABLE,
-			self::$_CONTEXT_TABLE . '.' . $this->get_pk_name() . ' = ' . $this->get_table() . '.' . $this->get_pk_name(),
-			'inner'
-		);
-		$this->{$this->db_group}->where(self::$_CONTEXT_TABLE . '.context', $context);
-		if ( ! is_null($id_context))
-			$this->{$this->db_group}->where(self::$_CONTEXT_TABLE . '.id_context', $id_context);
+		$this->_join_to_context($context, $id_context);
 
 		// Extend Definition List
 		$list = parent::get_list($where);
@@ -1108,7 +1158,7 @@ class Extend_field_model extends Base_model
 
 		if ( $this->exists($where, self::$_CONTEXT_TABLE))
 		{
-			$this->delete($where, self::$_CONTEXT_TABLE);
+			parrent::delete($where, self::$_CONTEXT_TABLE);
 		}
 	}
 
@@ -1116,12 +1166,108 @@ class Extend_field_model extends Base_model
 	// ------------------------------------------------------------------------
 
 
-	public function _join_to_extend_types()
+	public function check_context_existence($name, $context, $id_context, $id_extend = NULL)
+	{
+		$sql = "
+			SELECT e.id_extend_field
+			FROM extend_field e
+				JOIN extend_field_context c on c.id_extend_field = e.id_extend_field
+			WHERE
+				e.name = '".$name."'
+				AND c.context='".$context."'
+				AND c.id_context = ".$id_context;
+
+		if ( ! is_null($id_extend))
+		{
+			$sql .= '
+				AND e.id_extend_field <> '.$id_extend;
+		}
+
+		$query = $this->{$this->db_group}->query($sql);
+
+		return ($query->num_rows() > 0);
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
+	public function add_extend_filter_to_query($parent, $filters)
+	{
+		$filters = ! is_array($filters) ? explode(';', $filters) : $filters;
+
+		foreach ($filters as $idx => $filter)
+		{
+			$filter = str_replace('.gt', '>', $filter);
+			$filter = str_replace('.lt', '<', $filter);
+			$filter = str_replace('.eq', '=', $filter);
+			$filter = str_replace('.neq', '!=', $filter);
+
+			$matches = array();
+			$test = preg_match("/(.*)([=<>])(.*)/", $filter, $matches);
+
+			if ($test === 1)
+			{
+				$extend = $this->get_extend_definition_from_name(trim($matches[1]));
+
+				if ( ! is_null($extend))
+				{
+					$where = str_replace(trim($matches[1]), 'efs_' . $idx . '.content', $matches[0]);
+
+					$this->{$this->db_group}->join(
+						'extend_fields efs_' . $idx,
+						"efs_" . $idx . ".id_extend_field = " . $extend['id_extend_field'] .
+							" AND efs_" . $idx . ".parent = '".$parent."'" .
+							" AND efs_" . $idx . ".id_parent = ".$parent.".id_" . $parent,
+						'left'
+					);
+
+					$this->{$this->db_group}->where($where);
+				}
+
+				// log_message('app', print_r($this->{$this->db_group}->_compile_select() , TRUE));
+			}
+		}
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
+	public function get_extend_definition_from_name($name, $parent=NULL)
+	{
+		$extend = NULL;
+
+		$definitions = $this->get_definitions();
+
+		foreach($definitions as $definition)
+		{
+			if ($definition['name'] == $name)
+			{
+				if ($parent != NULL)
+				{
+					if ($definition['parent'] == $parent)
+						$extend = $definition;
+				}
+				else
+					$extend = $definition;
+			}
+		}
+
+		return $extend;
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
+	public function _join_to_extend_types($id_extend_type = NULL)
 	{
 		// Join to types
 		$this->{$this->db_group}->select(
 			self::$_TYPE_TABLE . '.type_name,'
 			.self::$_TYPE_TABLE . '.active,'
+			.self::$_TYPE_TABLE . '.display,'
 			.self::$_TYPE_TABLE . '.validate,'
 			.self::$_TYPE_TABLE . '.html_element,'
 			.self::$_TYPE_TABLE . '.html_element_type,'
@@ -1134,5 +1280,26 @@ class Extend_field_model extends Base_model
 			self::$_TYPE_TABLE . '.id_extend_field_type = ' . $this->get_table() . '.type',
 			'inner'
 		);
+
+		if ( ! is_null($id_extend_type))
+			$this->{$this->db_group}->where('id_extend_field_type', $id_extend_type);
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
+	public function _join_to_context($context, $id_context=NULL)
+	{
+		$this->{$this->db_group}->join(
+			self::$_CONTEXT_TABLE,
+			self::$_CONTEXT_TABLE . '.' . $this->get_pk_name() . ' = ' . $this->get_table() . '.' . $this->get_pk_name(),
+			'inner'
+		);
+
+		$this->{$this->db_group}->where(self::$_CONTEXT_TABLE . '.context', $context);
+
+		if ( ! is_null($id_context))
+			$this->{$this->db_group}->where(self::$_CONTEXT_TABLE . '.id_context', $id_context);
 	}
 }

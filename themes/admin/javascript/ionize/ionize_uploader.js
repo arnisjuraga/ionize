@@ -59,10 +59,15 @@ ION.Uploader = new Class({
 		previewListMode: 'auto',    // 'auto', list', 'card'
 		droparea: null,
 
-		uploadPost: null			// Object of {key:value}, added as POST data
+		uploadPost: null,			// Object of {key:value}, added as POST data
+
+		styles: {
+			'upload-list-item': 'list-item'
+		}
 		// Events
 		/*
 		 onItemComplete: function (item, file, response) {},
+		 onComplete: function(){}
 		 */
 	},
 
@@ -104,6 +109,9 @@ ION.Uploader = new Class({
 			}
 		});
 
+		if (typeOf(this.assetsUrl) == 'null')
+			this.assetsUrl = ION.themeUrl + 'javascript/mootools/filemanager/assets';
+
 		// Assets URL (bis)
 		this.assetsUrl = this.assetsUrl.replace(/(\/|\\)*$/, '/');
 
@@ -120,6 +128,8 @@ ION.Uploader = new Class({
 		this.initDomElements();
 		this.initDropZone();
 
+		this.fireEvent('loaded', [this]);
+
 		return this;
 	},
 
@@ -127,7 +137,7 @@ ION.Uploader = new Class({
 	{
 		// Select Button
 		this.uploadSelectButton = new Element('label', {
-			'class': 'button left',
+			'class': 'button left light',
 			'text': Lang.get('ionize_label_select_files_to_upload')
 		}).inject(this.container);
 
@@ -149,7 +159,7 @@ ION.Uploader = new Class({
 
 		// DropArea
 		if( typeOf(this.options.droparea ) == 'null')
-			this.uiDropArea = document.body
+			this.uiDropArea = document.body;
 		else
 			this.uiDropArea = $(this.options.droparea);
 
@@ -176,7 +186,6 @@ ION.Uploader = new Class({
 			onReset:function(method)
 			{
 				this.url = self.options.url;
-
 				self.fireEvent('reset', [this.method]);
 
 				// Useful to send the uploaded file directory
@@ -188,7 +197,7 @@ ION.Uploader = new Class({
 			{
 				var img_loaded = false;
 
-				item.addClass('list-item').adopt(
+				item.addClass(self.options.styles['upload-list-item']).adopt(
 					new Element('a', {'class': 'icon delete', 'style':'z-index:2'}).addEvent('click', function(e)
 					{
 						e.stop();
@@ -224,7 +233,7 @@ ION.Uploader = new Class({
 							{
 								var display_image = true;
 
-								if (Browser.ie && this.fileSize > 10000000)
+								if (Browser.name=='ie' && this.fileSize > 10000000)
 								{
 									display_image = false;
 									this.destroy();
@@ -296,11 +305,13 @@ ION.Uploader = new Class({
 
 			onItemComplete: function(item, file, response)
 			{
+				// Fires ION.Uploader event !
+				self.fireEvent('itemComplete', [item, file, response]);
+
 				// Get out if no progress bar
 				if( ! item.getElement('.progress')) return;
 
 				item.getElement('.progress').fade('show');
-
 				// Dim cannot be calculated on large file : upload starts before the DOM element is rendered.
 				// var dim = 80;
 				var parentSize = item.getElement('.progress').getDimensions();
@@ -314,21 +325,27 @@ ION.Uploader = new Class({
 				item.fade(0).get('tween').chain(function() {
 					this.element.destroy();
 				});
-
-				// Fires ION.Uploader event !
-				self.fireEvent('itemComplete', [item, file, response]);
 			},
 
-			onItemCancel: function(item)
+			onItemCancel: function(item, file)
 			{
+				self.fireEvent('itemCancel', [self, self.dropZone, item, file]);
+
 				// Remove item from DOM
 				item.fade(0).get('tween').chain(function() {
 					this.element.destroy();
 				});
 			},
 
+			onRequestCancel: function(item, file, response)
+			{
+				self.fireEvent('requestCancel', [self, self.dropZone, item, file, response]);
+			},
+
 			onItemError: function(item, file, response)
 			{
+				self.fireEvent('itemError', [self, self.dropZone, item, file, response]);
+
 				if (typeOf(ION.Notify) != 'null')
 				{
 					new ION.Notify(
@@ -346,23 +363,31 @@ ION.Uploader = new Class({
 			onUploadStart: function()
 			{
 				// Remove all Notify
+/*
 				if (typeOf(ION.Notify) != 'null')
 					new ION.Notify(self.notifyContainer,{}).removeAll();
+*/
+				self.fireEvent('uploadStart', [self, self.dropZone]);
 			},
 
 			onUploadProgress: function(perc, nb_uploaded_so_far){},
 
 			onUploadComplete: function(num_uploaded, num_error)
 			{
-				/*
-				 if (num_uploaded > 0)
-				 {
-				 new ION.Notify(
-				 self.notifyContainer,
-				 {type:'success'}
-				 ).show('Upload successful : <b>' + num_uploaded + ' file(s)</b> uploaded' );
-				 }
-				 */
+				// Fires ION.Uploader event !
+				self.fireEvent('complete', [self, self.dropZone]);
+
+				var elements = self.uploadZoneList.getChildren('.dropzone_item');
+
+				Array.each(elements, function(item){
+					var parentSize = item.getDimensions();
+					self.uploadZoneList.getChildren('.progress-bar').tween('width', parentSize.x);
+					self.uploadZoneList.getChildren('.progress-bar').innerHTML = '100 %';
+
+					item.fade(0).get('tween').chain(function() {
+						this.element.destroy();
+					});
+				});
 			}
 		});
 
@@ -374,5 +399,15 @@ ION.Uploader = new Class({
 				self.dropZone.setVar(key, val);
 			});
 		}
+	},
+
+	getButton: function()
+	{
+		return this.uploadSelectButton;
+	},
+
+	getUploadList: function()
+	{
+		return this.uploadZoneList;
 	}
 });

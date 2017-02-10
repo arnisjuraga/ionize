@@ -3,7 +3,7 @@
  *
  */
 
-// Check if at least on Item instance exists (same for Content Element Definition)
+// Check if at least one Item instance exists (same for Content Element Definition)
 $is_item_empty = $this->base_model->is_empty(NULL, 'item');
 $is_element_empty = $this->base_model->is_empty(NULL, 'element_definition');
 
@@ -17,9 +17,8 @@ $is_element_empty = $this->base_model->is_empty(NULL, 'element_definition');
 		</a>
 	</div>
 
-<?php endif;?>
-
-<?php if(Authority::can('delete', 'admin/page') && Authority::can('delete', 'backend/page/' . $id_page, null, true)) :?>
+<?php endif;
+if(Authority::can('delete', 'admin/page') && Authority::can('delete', 'backend/page/' . $id_page, null, true)) :?>
 
 	<div class="divider nobr" id="tPageDeleteButton">
 		<a id="pageDeleteButton" class="button no">
@@ -35,17 +34,8 @@ $is_element_empty = $this->base_model->is_empty(NULL, 'element_definition');
 	</a>
 </div>
 
-<?php if( ! $is_element_empty && Authority::can('add', 'admin/page/element')) :?>
-
-	<div class="divider" id="tPageAddContentElement">
-		<a id="addContentElement" class="button light" >
-			<i class="icon-element"></i><?php echo lang('ionize_label_add_content_element'); ?>
-		</a>
-	</div>
-
-<?php endif;?>
-
-<?php if( ! $is_item_empty && Authority::can('add', 'admin/item')) :?>
+<?php
+if( ! $is_item_empty && Authority::can('add', 'admin/item')) :?>
 
 	<div class="divider" id="tPageAddItem">
 		<a id="btnAddItem" class="button light" >
@@ -53,9 +43,8 @@ $is_element_empty = $this->base_model->is_empty(NULL, 'element_definition');
 		</a>
 	</div>
 
-<?php endif;?>
-
-<?php if (
+<?php endif;
+if (
 		(Authority::can('add', 'admin/page/article') OR Authority::can('create', 'admin/article'))
 		&& Authority::can('add_article', 'backend/page/' . $id_page, null, true)
 	)
@@ -85,7 +74,6 @@ $is_element_empty = $this->base_model->is_empty(NULL, 'element_definition');
 	if ( ! id )
 	{
 		if ($('tPageDeleteButton')) $('tPageDeleteButton').hide();
-        if ($('tPageAddContentElement')) $('tPageAddContentElement').hide();
         if ($('tPageAddItem')) $('tPageAddItem').hide();
         if ($('tPageAddArticle')) $('tPageAddArticle').hide();
         if ($('tSideColumnSwitcher')) $('tSideColumnSwitcher').hide();
@@ -100,27 +88,16 @@ $is_element_empty = $this->base_model->is_empty(NULL, 'element_definition');
 
 		<?php endif;?>
 
-
-		<?php if(! $is_element_empty && Authority::can('add', 'admin/page/element')) :?>
-
-			// Add Content Element button
-			$('addContentElement').addEvent('click', function()
-			{
-				ION.dataWindow('contentElement', 'ionize_title_add_content_element', 'element/add_element', {width:500, height:350}, {'parent':'page', 'id_parent': id});
-			});
-
-		<?php endif;?>
-
-		<?php if( ! $is_item_empty && Authority::can('add', 'admin/item')) :?>
+		<?php
+		if( ! $is_item_empty && Authority::can('add', 'admin/item')) :?>
 
 			$('btnAddItem').addEvent('click', function()
 			{
 				staticItemManager.openListWindow();
 			});
 
-		<?php endif;?>
-
-		<?php if(
+		<?php endif;
+		if(
 			(Authority::can('add', 'admin/page/article') OR Authority::can('create', 'admin/article'))
 			&& Authority::can('add_article', 'backend/page/' . $id_page, null, true)
 		)
@@ -140,7 +117,6 @@ $is_element_empty = $this->base_model->is_empty(NULL, 'element_definition');
 			});
 
 		<?php endif;?>
-
     }
 
 	// Options column switcher

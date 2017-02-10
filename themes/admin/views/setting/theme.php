@@ -7,7 +7,7 @@
 	<!-- Tabs -->
 	<div id="themeTab" class="mainTabs mt20">
 		<ul class="tab-menu">
-			<li><a><?php echo lang('ionize_title_views_list'); ?> : <?php echo Settings::get('theme'); ?></a></li>
+			<li><a><?php echo lang('ionize_title_views_list'); ?>: <?php echo Settings::get('theme'); ?></a></li>
 			<li><a><?php echo lang('ionize_title_options'); ?></a></li>
 		</ul>
 		<div class="clear"></div>
@@ -45,14 +45,14 @@
 							?>
 
 							<tr>
-								<td><a class="icon edit viewEdit" data-id="<?php echo $rel; ?>"></a></td>
-								<td><a class="viewEdit" data-id="<?php echo $rel; ?>"><?php echo $file->name; ?></a></td>
-								<td><?php echo $file->path; ?> </td>
+								<td><a class="icon edit viewEdit m5" data-id="<?php echo $rel; ?>"></a></td>
+								<td class="middle"><a class="viewEdit" data-id="<?php echo $rel; ?>"><?php echo $file->name; ?></a></td>
+								<td class="middle"><?php echo $file->path; ?> </td>
 								<td>
-									<input type="text" class="inputtext w160" name="viewdefinition_<?php echo $rel; ?>" value="<?php echo $file->definition; ?>" />
+									<input type="text" class="inputtext w95p" name="viewdefinition_<?php echo $rel; ?>" value="<?php echo $file->definition; ?>" />
 								</td>
 								<td>
-									<select class="select" name="viewtype_<?php echo $rel; ?>">
+									<select class="select w95p" name="viewtype_<?php echo $rel; ?>">
 										<option value=""><?php echo lang('ionize_select_no_type'); ?></option>
 										<option <?php if($file->type == 'page') :?> selected="selected" <?php endif ;?> value="page">Page</option>
 										<option <?php if($file->type == 'article') :?> selected="selected" <?php endif ;?> value="article">Article</option>
@@ -169,14 +169,15 @@
 				id: 'w' + id,
 				title: Lang.get('ionize_title_view_edit') + ' : ' + rel,
 				content: {
-					url: admin_url + 'setting/edit_view/' + rel,
+					url: ION.adminUrl + 'setting/edit_view/' + rel,
 					method:'post',
 					onLoaded: function(element, content)
 					{
 						// CodeMirror settings
-						var c = $('editview_' + id).value;
+						var editViewItem = $('editview_' + id);
+						var c = editViewItem.value;
 
-						var mirrorFrame = new ViewCodeMirror(CodeMirror.replace($('editview_' + id)), 
+						var mirrorFrame = new ViewCodeMirror(CodeMirror.replace(editViewItem),
 						{
 							height: "360px",
 							width: "95%",

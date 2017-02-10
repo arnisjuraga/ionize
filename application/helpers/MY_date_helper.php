@@ -24,7 +24,7 @@ if ( ! function_exists('isDate'))
 {
 	function isDate($mysqlDatetime)
 	{
-		return ($mysqlDatetime != '0000-00-00 00:00:00' && $mysqlDatetime != '') ? true : false;
+		return ($mysqlDatetime != '0000-00-00 00:00:00' && $mysqlDatetime != '');
 	}
 }
 
@@ -38,18 +38,18 @@ if ( ! function_exists('getFrenchDatetime'))
 {
 	function getFrenchDatetime($mysqlDatetime)
 	{
-		if($mysqlDatetime != "0000-00-00 00:00:00" && $mysqlDatetime !="")
+		if($mysqlDatetime !='' && $mysqlDatetime != '0000-00-00 00:00:00')
 		{
 			if (($timestamp = strtotime($mysqlDatetime)) == '-1')
 			{
 				return $mysqlDatetime;
 			}
 			else {
-				return date("d.m.Y H:i:s", $timestamp);
+				return date('d.m.Y H:i:s', $timestamp);
 			}
 		}
 		else {
-			return "";
+			return '';
 		}
 	}
 }
@@ -85,7 +85,7 @@ if ( ! function_exists('getMysqlDatetime'))
 				list($year, $month, $day) = preg_split("/[\/.-]/", $date);
 			}
 			else
-				return date("Y-m-d H:i:s", strtotime($inputDate));
+				return date('Y-m-d H:i:s', strtotime($inputDate));
 
 			return "$year-$month-$day $time";
 		}
@@ -97,7 +97,7 @@ if ( ! function_exists('humanize_mdate'))
 {
 	function humanize_mdate($mdate, $datestr = '%d.%m.%Y at %H:%i:%s')
 	{
-		if ($mdate != '' && $mdate != "0000-00-00 00:00:00")
+		if ($mdate != '' && $mdate != '0000-00-00 00:00:00')
 		{
 			$timestamp 	= strtotime($mdate);
 			$datestr 	= str_replace('%\\', '', preg_replace("/([a-z]+?){1}/i", "\\\\\\1", $datestr));
@@ -107,25 +107,47 @@ if ( ! function_exists('humanize_mdate'))
 	}
 }
 
+if ( ! function_exists('dateDiff'))
+{
+	function dateDiff($first, $second=NULL, $unit = 'day')
+	{
+		if (is_null($second)) $second = date('Y-m-d H:i:s');
 
-/**
- * Days count between 2 dates
- * @note	Not used for the moment.
-function getDaysBetween($debut, $fin) {
+		$first = strtotime($first);
+		$second = strtotime($second);
 
-  $tDeb = explode(".", $debut);
-  $tFin = explode(".", $fin);
+		$subTime = $second - $first;
 
-  $diff = mktime(0, 0, 0, $tFin[1], $tFin[0], $tFin[2]) -
-		  mktime(0, 0, 0, $tDeb[1], $tDeb[0], $tDeb[2]);
-
-  return(($diff / 86400)+1);
-
+		if ($unit == 'year') return $subTime/(60*60*24*365);
+		if ($unit == 'day') return (int) ($subTime/(60*60*24));
+		if ($unit == 'hour') return (int) ($subTime/(60*60));
+		if ($unit == 'min') return (int) ($subTime/60);
+	}
 }
+if ( ! function_exists('lang_date'))
+{
+	function lang_date($date, $format='Y-m-d')
+	{
+		$date = strtotime($date);
 
+		if ($date)
+		{
+			$segments = explode(' ', $format);
 
- */
+			foreach($segments as $key => $segment)
+			{
+				$tmp = (String) date($segment, $date);
 
-/* End of file MY_date_helper.php */
-/* Location: ./application/helpers/MY_date_helper.php */
+				if (preg_match('/D|l|F|M/', $segment))
+					$tmp = lang(strtolower($tmp));
+
+				$segments[$key] = $tmp;
+			}
+
+			return implode(' ', $segments);
+		}
+
+		return '';
+	}
+}
 

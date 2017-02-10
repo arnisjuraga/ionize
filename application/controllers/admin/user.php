@@ -12,8 +12,14 @@
 
 class User extends My_Admin
 {
+	/** @var Role_model */
 	public $current_role = NULL;
 
+	/** @var  User_model */
+	public $user_model;
+
+	/** @var  Role_model */
+	public $role_model;
 
 	/**
 	 * Constructor
@@ -121,6 +127,39 @@ class User extends My_Admin
 	// ------------------------------------------------------------------------
 
 
+	public function get_pagination_list()
+	{
+		$page = $this->input->post('page');
+		$filter = $this->input->post('filter');
+		$post_where = $this->input->post('where');
+		$nb_by_page = 50;
+		if ( ! $page) $page = 1;
+
+		// Filter by role : Do not show upper user to lower role !
+		$where = array(
+			'role_level <= ' => $this->current_role['role_level']
+		);
+
+		if ($post_where)
+			$where = array_merge($where, $post_where);
+
+		$data = $this->user_model->get_pagination_list($page, $filter, $nb_by_page, $where);
+
+		$result = array(
+			'items' => $data['items'],
+			'nb' => $data['nb'],
+			'nb_by_page' => $nb_by_page,
+			'page' => $page,
+			'filter' => $filter,
+		);
+
+		$this->xhr_output($result);
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
 	/**
 	 * Creation Form
 	 *
@@ -183,31 +222,24 @@ class User extends My_Admin
 			$id_user = $this->input->post('id_user');
 			$post = $this->input->post();
 
-			$post = array_merge(
-				$post,
-				array(
-					'join_date' => $id_user ? $this->input->post('join_date') : date('Y-m-d H:i:s'),
-					'salt' => $id_user ? $this->input->post('salt') : User()->get_salt(),
-				)
-			);
+			$post['salt'] = User()->get_salt();
+			if ( empty($id_user)) $post['join_date'] = date('Y-m-d H:i:s');
 
-			// Existing
-			if ($id_user != FALSE)
-			{
-				if (($this->input->post('password') != '' && $this->input->post('password2') != '') &&
-					($this->input->post('password') == $this->input->post('password2'))	)
-				{
-					$post['password'] = User()->encrypt($this->input->post('password'), $post);
-				}
-				else
-				{
-					unset($post['password'], $post['password2']);
-				}
-			}
-			// New
-			else
+			// Passwords must match
+			if (($this->input->post('password') != '') &&
+				($this->input->post('password') === $this->input->post('password2')))
 			{
 				$post['password'] = User()->encrypt($this->input->post('password'), $post);
+			}
+			else
+			{
+				unset($post['password'], $post['password2']);
+			}
+
+			// New user?
+			if ($id_user == false)
+			{
+				$post['id_user'] = null;
 			}
 
 			// Save
@@ -215,12 +247,26 @@ class User extends My_Admin
 
 			// Send message to user if needed
 			$message = $this->input->post('message');
-			if ($id_user &&  ! is_null($new_id_user) && $message != '')
+
+			if ( ! is_null($new_id_user) && $message != '')
 			{
+				// Update
+				if ($id_user)
+				{
+					$subject = Settings::get('site_title') . ' : ' .lang('ionize_subject_your_account_has_been_updated');
+					$message_intro = lang('ionize_message_your_account_has_been_created');
+				}
+				else
+				{
+					$subject = Settings::get('site_title') . ' : ' .lang('ionize_subject_your_account_has_been_created');
+					$message_intro = lang('ionize_message_your_account_has_been_updated');
+				}
+
 				// Group
 				$user = $this->user_model->get_user(array('id_user' => $new_id_user));
 
 				$email_data = array(
+					'message_intro' =>  $message_intro,
 					'message' =>  $message,
 					'role' => $user['role_name'],
 					'firstname' => $user['firstname'],
@@ -232,24 +278,24 @@ class User extends My_Admin
 				$this->send_email(
 					Settings::get('site_email'),
 					$post['email'],
-					Settings::get('site_title') . ' : ' .lang('ionize_subject_your_account_has_been_updated'),
+					$subject,
 					$email_data,
 					'mail/system/to_user'
 				);
 			}
 
 			// Reload user list
-			if ( ! empty($post['from']) && $post['from'] == 'dashboard')
+/*			if ( ! empty($post['from']) && $post['from'] === 'dashboard')
 			{
 				$this->_reload_dashboard();
 			}
 			else
 			{
 				$this->_reload_user_list();
-			}
+			}*/
 
 			// Success message
-			$this->success(lang('ionize_message_user_saved'));
+			$this->success(lang('ionize_message_user_saved'), array('id_user' => $new_id_user));
 		}
 	}
 
@@ -397,12 +443,69 @@ class User extends My_Admin
 
 
 	/**
+	 * Must be called by XHR
+	 * Called by User Edition form Validation
+	 *
+	 * Returns 1 if true, 0 if false
+	 *
+	 */
+	function check_username_exists()
+	{
+		$id_user = $this->input->post('id_user');
+		$username = $this->input->post('username');
+
+		$exists = $this->user_model->check_username_exists($username, $id_user);
+
+		$this->xhr_output($exists);
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
+	/**
+	 * Search users by email
+	 * XHR
+	 *
+	 * Used by AutoCompleter
+	 *
+	 */
+	function search_email()
+	{
+		$min = 2;
+		$max = 50;
+		$limit = 7;
+		$search = $this->input->post('search');
+		$results = array();
+
+		// quick validation
+		if(strlen($search) >= $min && strlen($search) <= $max)
+		{
+			$results = $this->user_model->simple_search($search, 'email', $limit);
+
+			$list = '';
+			foreach ($results as $result)
+			{
+				$list .= "<li data-id=\"$result[id_user]\" data-firstname=\"$result[firstname]\" data-lastname=\"$result[lastname]\"><span>$result[email]</span><a class=\"link \" ></a></li>";
+			}
+
+			if ( ! empty($list))
+				echo $list;
+			die();
+		}
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
+	/**
 	 * Roles filter callback function
 	 *
 	 */
 	public function _filter_roles($row)
 	{
-		return ($row['role_level'] <= $this->current_role['role_level']) ? true : false;
+		return ($row['role_level'] <= $this->current_role['role_level']);
 	}
 
 

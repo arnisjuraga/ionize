@@ -1,4 +1,3 @@
-
 <div class="block">
 	<ul id="nav">
 
@@ -19,11 +18,9 @@
 
 	<h2><?php echo lang('title_system_check') ?></h2>
 
-
 	<?php if(isset($message)) :?>
 		<p class="<?php echo $message_type ?>"><?php echo $message ?></p>
 	<?php endif ;?>
-
 
 	<!-- PHP Version -->
 	<ul class="check">
@@ -32,6 +29,7 @@
 		<li class="<?php if($safe_mode) :?>ok<?php else :?>fail<?php endif ;?>">Safe Mode Off </li>
 		<li class="<?php if($file_uploads) :?>ok<?php else :?>fail<?php endif ;?>"><?php echo lang('file_uploads')?></li>
 		<li class="<?php if($gd_lib) :?>ok<?php else :?>fail<?php endif ;?>"><?php echo lang('gd_lib')?></li>
+		<li class="<?php if($curl_lib) :?>ok<?php else :?>fail<?php endif ;?>"><?php echo lang('curl_lib')?></li>
 	</ul>
 
 	<h2><?php echo lang('title_folder_check') ?></h2>
@@ -57,3 +55,10 @@
 		<?php endif ;?>
 	</div>
 </div>
+
+<script type="text/javascript">
+	// Detect re-installation (installer loaded into content-div of backend)
+	if( document.getElementById('sideColumn') ) {
+		window.location.href = '../';	// reload one level up
+	}
+</script>

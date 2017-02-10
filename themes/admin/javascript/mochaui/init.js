@@ -55,7 +55,8 @@ Ionize.initializeDesktop = function(){
 							*/
 							]
 						},
-						{id: 'mainColumn',	placement: 'main', resizeLimit: [100, 300],sortable: false,
+						{
+							id: 'mainColumn',	placement: 'main', resizeLimit: [100, 300],sortable: false,
 							panels:[
 							{
 								id: 'mainPanel',
@@ -87,10 +88,7 @@ Ionize.initializeDesktop = function(){
 		}
 	});
 
-
 };
-
-
 
 // Initialize MochaUI when the DOM is ready
 window.addEvent('load', function()
@@ -107,3 +105,6 @@ window.addEvent('load', function()
 
 });
 
+window.onbeforeunload = function () {
+	return "This session is expired and the history altered.";
+};

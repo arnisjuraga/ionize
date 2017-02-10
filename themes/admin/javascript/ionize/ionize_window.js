@@ -6,6 +6,10 @@ ION.Window = new Class({
 
 	Implements: [Events, Options],
 
+	w: null,			// Mocha UI Window
+ 	buttons:[],			// Array of bottom buttons
+	divButtons: null,
+
 	options: {
 		type:'window',
 		y: 40,
@@ -15,7 +19,10 @@ ION.Window = new Class({
 		contentBgColor: '#fff',
 		barTitle: '',
 		title: null,
-		onDraw: function(){}
+		buttons:[],
+		onDraw: function(){},
+		onBeforeSave: null			// Function called in case of "form" type before any save
+									// Must return true
 
 		/*
 		 * User's options :
@@ -35,7 +42,7 @@ ION.Window = new Class({
 		 ]
 		 form: {
 		    id: '',                 // Form ID
-		    clas: '',               // Form CSS class
+		    class: '',               // Form CSS class
 		    action: '',             // URL to the save controller
 		    reload: function(),     // Function executed after Form save,
 		    post: {					// Data to merge with the form data
@@ -56,16 +63,17 @@ ION.Window = new Class({
 
 	/**
 	 *
-	 * @param options
+	 * @param	{Object}	options
 	 */
 	initialize: function()
 	{
 		var options = arguments[0] ? arguments[0] : {};
 		this.setOptions(options);
 
+		var self;
 		if (options.id && $(options.id))
 		{
-			var self = $(options.id).retrieve('ion_window');
+			self = $(options.id).retrieve('ion_window');
 
 			var w = self.getWindow();
 			w.focus.delay(10, w);
@@ -76,12 +84,18 @@ ION.Window = new Class({
 		else
 		{
 			var t = this.options.type;
-			delete this.options.type;
+			delete options.type;
 
 			if (t == 'form')
-				this.w = this._createFormWindow(this.options);
+				this.w = this._createFormWindow(options);
 			else
-				this.w = this._createWindow(this.options);
+				this.w = this._createWindow(options);
+
+			// Once we have this.w, we can affect 'this' to all buttons
+			self = this;
+			this.buttons.each(function(button){
+				button.w = self;
+			});
 
 			this.fireEvent('onDraw', this);
 
@@ -99,12 +113,22 @@ ION.Window = new Class({
 		return this.w;
 	},
 
+	getWrapper: function()
+	{
+		return this.w.el.contentWrapper;
+	},
+
 	getForm: function()
 	{
 		if (typeOf(this.form) != 'null')
 			return this.form;
 
 		return null;
+	},
+
+	getTitle: function()
+	{
+		return this.title;
 	},
 
 	getSaveButton: function()
@@ -117,40 +141,74 @@ ION.Window = new Class({
 		return this.saveReloadButton;
 	},
 
+	getButtonsContainer: function()
+	{
+		return this.divButtons;
+	},
+
 	close: function()
 	{
 		this.w.close();
 	},
 
+	resize: function(x,y)
+	{
+		this.w.resize({width:x, height:y, top:70, centered:true});
+	},
+
 	_createWindow: function(opt)
 	{
-		var options = {
-			container: document.body,
-			content:{}
-		};
+		var self = this,
+			options = {
+				container: document.body,
+				content:{}
+			}
+		;
 
 		opt.contentTitle = (opt.title && opt.title.text) ? opt.title.text : null;
 		opt.contentTitleClass = (opt.title && opt.title.class) ? ' ' + opt.title.class : '';
-		opt.title = opt.barTitle != '' ? opt.barTitle : '';
+		opt.title = typeOf(opt.barTitle) != 'null' && opt.barTitle != '' ? opt.barTitle : (opt.contentTitle != null ? opt.contentTitle : '');
+		opt.cssClass = opt.cssClass != '' ? opt.cssClass : '';
 
 		Object.append(options, opt);
+
+		// Prepare the buttons
+		Object.each(opt.buttons, function(bOptions)
+		{
+			if ( ! bOptions['class']) bOptions['class'] = 'green';
+
+			var button = new ION.Button(bOptions);
+
+			if ( ! button.getElement().hasClass('right') && ! button.getElement().hasClass('left'))
+				button.getElement().addClass('right');
+
+			self.buttons.push(button);
+		});
 
 		if (options.contentTitle)
 		{
 			var ode = null;
 
-			if (options.onDrawEnd)
+			if (opt.onDrawEnd)
 			{
-				ode = options.onDrawEnd;
+				ode = opt.onDrawEnd;
 			}
 
 			options['onDrawEnd'] = function(w)
 			{
-				var title = new ION.WindowTitle({
+				self.title = new ION.WindowTitle({
 					title: options.contentTitle,
 					subtitle: opt.subtitle,
 					'class': options.contentTitleClass,
 					container: w.el.content
+				});
+
+				self.divButtons = new Element('div', {'class':'buttons'}).inject(w.el.content);
+
+				// Buttons set as options
+				self.buttons.each(function(button)
+				{
+					button.getElement().inject(self.divButtons);
 				});
 
 				if ( ode != null)
@@ -159,7 +217,6 @@ ION.Window = new Class({
 		}
 
 		var w = new MUI.Window(options);
-
 		w.el.windowEl.store('ion_window', this);
 
 		return w;
@@ -189,18 +246,18 @@ ION.Window = new Class({
 				{
 					self.form = new Element('form', {
 						id: opt.form.id,
-						'class': opt.form.class,
+						'class': opt.form['class'],
 						action: opt.form.action,
 						method: 'post'
 					}).inject(w.el.content);
 
-					var divButtons = new Element('div', {'class':'buttons'}).inject(w.el.content);
+					self.divButtons = new Element('div', {'class':'buttons'}).inject(w.el.content);
 
 					self.saveButton = new Element('button', {
 						'class':'button right yes',
 						id: 'save' + opt.form.id,
 						text: Lang.get('ionize_button_save_close')
-					}).inject(divButtons);
+					}).inject(self.divButtons);
 
 					// Form data to send with the form, whatever is sent btw.
 					if (opt.form.post)
@@ -224,26 +281,53 @@ ION.Window = new Class({
 						});
 					}
 
+					// Save and Reload
 					if (opt.form.reload)
 					{
 						self.saveReloadButton = new Element('button', {
 							'class':'button blue right ml10',
 							text: Lang.get('ionize_button_save')
-						}).inject(divButtons);
+						}).inject(self.divButtons);
 
 						self.saveReloadButton.addEvent('click', function()
 						{
-							ION.JSON(
-								opt.form.action,
-								self.form,
+							var save = true;
+
+							if (typeOf(opt.form.action) == 'null') {
+								console.log('Error : form.action not set !');
+								return;
+							}
+
+							if (typeOf(opt.form.onBeforeSave) == 'function')
+								save = opt.form.onBeforeSave(self.form);
+
+							if (save == true)
+							{
+								var validator = self.form.retrieve('validator');
+
+								if (validator && ! validator.validate())
 								{
-									onSuccess:function(json)
-									{
-										w.close();
-										opt.form.reload(json);
-									}
+									new ION.Notify(self.form, {type:'error'}).show('ionize_message_form_validation_please_correct');
 								}
-							);
+								else
+								{
+									// tinyMCE and CKEditor trigerSave
+									ION.updateRichTextEditors();
+
+									ION.JSON(
+										opt.form.action,
+										self.form,
+										{
+											onSuccess: function (json) {
+												w.close();
+												opt.form.reload(json);
+												if (opt.form.onSuccess)
+													opt.form.onSuccess(json);
+											}
+										}
+									);
+								}
+							}
 						});
 					}
 
@@ -251,7 +335,7 @@ ION.Window = new Class({
 						'class':'button right red',
 						id: 'cancel' + opt.form.id,
 						text: Lang.get('ionize_button_cancel')
-					}).inject(divButtons);
+					}).inject(self.divButtons);
 
 					cancelButton.addEvent('click', function(){ w.close(); });
 
@@ -260,7 +344,7 @@ ION.Window = new Class({
 						self.saveButton.id,     // Save button ID
 						self.form.action,  // Save URL
 						null,              // Confirmation Object (null in this case, no conf. to open one window)
-						opt.form           // Options, to pass onSuccess() method
+						opt.form           // Options, to pass onSuccess() and onBeforeSaveClose() methods
 					);
 				}
 			}
@@ -280,9 +364,7 @@ ION.Window = new Class({
 
 		Object.append(opt, options);
 
-		var w = this._createWindow(opt);
-
-		return w;
+		return this._createWindow(opt);
 	}
 });
 
@@ -303,6 +385,7 @@ ION.WindowTitle = new Class({
 			...
 		*/
 		],
+		attributes: {},				// HTML attributes of the title
 		build: true                 // Build or not the title. If false, the title will need to be returned
 									// with getDomElement()
 	},
@@ -322,21 +405,69 @@ ION.WindowTitle = new Class({
 
 	buildTitle: function()
 	{
+		var self = this;
+
 		this.domElement = new Element('div');
 
-		var h2 = new Element('h2', {
+		this.h2 = new Element('h2', {
 			'class': 'main ' + this.options.class,
-			'text' : this.options.title
+			'html' : this.options.title
 		}).inject(this.domElement);
+
+		Object.each(this.options.attributes, function(value, idx)
+		{
+			self.h2.setProperty(idx, value);
+		});
 
 		// Subtitle is one array of objects
 		if (this.options.subtitle)
+			this.setSubtitle(this.options.subtitle);
+
+		if (this.options.build == true)
+			this.domElement.inject(this.container);
+	},
+
+	addClass: function(cl)
+	{
+		this.h2.addClass(cl);
+		return this;
+	},
+
+	removeClass: function(cl)
+	{
+		this.h2.removeClass(cl);
+		return this;
+	},
+
+	setTitle: function(title)
+	{
+		if (this.h2) this.h2.set('html', title);
+	},
+
+	getTitle: function()
+	{
+		return this.h2;
+	},
+
+	getDomElement: function()
+	{
+		return this.domElement;
+	},
+
+	setSubtitle: function(subtitle)
+	{
+		this.getSubtitleDomElement().empty();
+
+		var p = new Element('p').inject(this.subTitleElement);
+
+		if (subtitle.class)
+			this.getSubtitleDomElement().addClass(subtitle.class);
+
+		if (typeOf(subtitle) == 'string')
+			var span = new Element('span', {'class': 'lite', 'html': subtitle  }).inject(p);
+		else
 		{
-			this.buildSubtitleElement();
-
-			var p = new Element('p').inject(this.subTitleElement);
-
-			Object.each(this.options.subtitle, function(sub, idx)
+			Object.each(subtitle, function(sub, idx)
 			{
 				if (idx == 'html')
 				{
@@ -347,26 +478,33 @@ ION.WindowTitle = new Class({
 					if (idx > 0)
 						new Element('span', {'html': ' | '}).inject(p);
 
-					if (sub.key)
+					if (typeOf(sub.html) != 'null')
+					{
+						sub = {value:sub.html}
+					}
+					else if (sub.key && typeOf(sub.key) == 'string')
 					{
 						var span = new Element('span', {'class': 'lite', 'html': sub.key  }).inject(p);
 
 						if (sub.value)
 							span.set('html', span.get('html') + ' : ' );
 					}
-
 				}
-				new Element('span', {'html': sub.value}).inject(p);
+				if(typeOf(sub.value) == 'element')
+					sub.value.inject(p);
+				else
+					new Element('span', {'html': sub.value}).inject(p);
 			});
 		}
-
-		if (this.options.build == true)
-			this.domElement.inject(this.container)
 	},
 
-	getDomElement: function()
+	removeSubtitle: function()
 	{
-		return this.domElement;
+		if (this.subTitleElement != null)
+		{
+			this.subTitleElement.destroy();
+			this.subTitleElement = null;
+		}
 	},
 
 	getSubtitleDomElement: function()
@@ -467,7 +605,7 @@ ION.append({
 			draggable: true,
 			y: 150,
 			padding: { top: 15, right: 15, bottom: 8, left: 15 }			
-		}
+		};
 
 		// Extends the window options
 		if (typeOf(wOptions) != 'null') {options =  Object.append(options, wOptions);}
@@ -502,11 +640,12 @@ ION.append({
 	 * Ionize generic form window
 	 * Use to load a window which contains a form 
 	 *
-	 * @param	string		Window ID.
-	 * @param	string		Window Form ID
-	 * @param	string		Lang translation key or string as title of the window
-	 * @param	string		URL called in case of form validation
-	 * @param	object		Window extended options
+	 * @param	{String}	id			Window ID.
+	 * @param	{String}	form		Window Form ID
+	 * @param	{String}	title		Lang translation key or string as title of the window
+	 * @param	{String}	wUrl		URL called in case of form validation
+	 * @param	{Object}	wOptions	Window extended options
+	 * @param	{Object}	data
 	 *
 	 */
 	formWindow: function(id, form, title, wUrl, wOptions, data)
@@ -521,7 +660,7 @@ ION.append({
 			title: (typeOf(Lang.get(title)) == 'null') ? title : Lang.get(title),
 			container: document.body,
 			content: {
-				url: admin_url + wUrl,
+				url: ION.adminUrl + wUrl,
 				method:'post',
 				data: data,
 				onLoaded: function(element, content)
@@ -573,9 +712,10 @@ ION.append({
 		return new MUI.Window(options);
 	},
 
+
 	/**
 	 * Opens a data window, without buttons
-	 * Usefull for editing a list
+	 * Useful for editing a list
 	 *
 	 */
 	dataWindow: function(id, title, wUrl, wOptions, data)
@@ -590,7 +730,7 @@ ION.append({
 			container: document.body,
 			// evalResponse: true,
 			content: {
-				url: admin_url + wUrl,
+				url: ION.adminUrl + wUrl,
 				data: data,
 				method: 'post',
 				onLoaded: function(element, content)
@@ -643,14 +783,21 @@ ION.append({
 		// Window creation
 		return new MUI.Window(options);
 	},
-	
 
+
+	/**
+	 *
+	 * @param	{String}	type
+	 * @param	{String}	msg
+	 * @returns {Object}
+	 * @private
+	 */
 	_getModalOptions: function(type, msg)
 	{
 		// Window message
 		var wMsg = (Lang.get(msg)) ? Lang.get(msg) : msg ;
 	
-		var btnOk = new Element('button', {'class':'button yes right mr35'}).set('text', Lang.get('ionize_button_ok'));
+		var btnOk = new Element('button', {'class':'button yes right'}).set('text', Lang.get('ionize_button_ok'));
 
 		var button = new Element('div', {'class':'buttons'}).adopt(btnOk);
 
@@ -667,9 +814,10 @@ ION.append({
 			title: Lang.get('ionize_modal_' + type + '_title'),
 			cssClass: type,
 			draggable: true,
+			resizable: true,
 			y: 150,
 			padding: { top: 15, right: 15, bottom: 8, left: 15 }			
-		}
+		};
 
 		// Event on btn No : Simply close the window
 		btnOk.addEvent('click', function() 
@@ -683,10 +831,10 @@ ION.append({
 	/**
 	 * Returns the buttons yes/no HTMLDOMElement
 	 *
-	 * @param	string		Window ID (to link with the close button)
-	 * @param	string		URL or Callback JS function to call if yes answer
-	 * @param	string		Element to update after url completion
-	 * @param	string		URL of the update element
+	 * @param	{String}	id			Window ID (to link with the close button)
+	 * @param	{String}	callback	URL or Callback JS function to call if yes answer
+	 * @param	{String}				Element to update after url completion
+	 * @param	{String}				URL of the update element
 	 *
 	 */
 	_getConfirmationButtons:  function(id, callback)
@@ -744,7 +892,7 @@ ION.append({
 	/**
 	 * Resizes one window based on its content
 	 *
-	 * @param	String		Windows ID, without the Mocha prefix (w)
+	 * @param	{String}	id		Windows ID, without the Mocha prefix (w)
 	 *
 	 */
 	windowResize: function(id, size, resize, centered )

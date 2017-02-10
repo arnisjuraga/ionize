@@ -102,7 +102,11 @@ class Media_model extends Base_model
 			$query = $this->{$this->db_group}->get($this->get_table());
 
 			if($query->num_rows() > 0)
+			{
 				$data = $query->result_array();
+
+				$data = $this->_add_medias_infos($data);
+			}
 		}
 		return $data;
 	}
@@ -140,8 +144,14 @@ class Media_model extends Base_model
 				$this->{$this->db_group}->select($this->get_table().'.*', FALSE);
 
 				$where = array(
-					'where_in' => array($this->get_table().'.id_media' => $ids),
-					'order_by' => "field(" . $this->get_table() . ".id_media, ".$extend['content'] . ")"
+					'where_in' => array($this->get_table().'.id_media' => $ids)
+				);
+
+				// Separated from $where due to $escape set to FALSE
+				$this->{$this->db_group}->order_by(
+					'field(' . $this->get_table() . '.id_media, '.$extend['content'] . ')',
+					'',
+					FALSE
 				);
 
 				if ( ! is_null($lang))
@@ -157,6 +167,8 @@ class Media_model extends Base_model
 				}
 
 				$data = parent::get_list($where, $this->get_table());
+
+				$data = $this->_add_medias_infos($data);
 			}
 		}
 
@@ -407,7 +419,7 @@ class Media_model extends Base_model
 		{
 			$data = array();
 			$link_table = $post['parent'].'_media';
-			$fields = $this->{$this->db_group}->list_fields($link_table);
+			$fields = $this->list_fields($link_table);
 			
 			foreach ($fields as $field)
 			{
@@ -433,21 +445,20 @@ class Media_model extends Base_model
 
 
 	/**
-	 * @param $id
-	 * @param $parent
-	 * @param $id_parent
-	 *
-	 * @return array
+	 * @param	int		$id_media
+	 * @param	string	$parent
+	 * @param	int		$id_parent
+	 * @return	array
 	 */
-	public function get_context_data($id, $parent, $id_parent)
+	public function get_context_data($id_media, $parent, $id_parent)
 	{
 		$data = array();
 		
 		$link_table = $parent.'_media';
-		$parent_pk = 'id_'.$parent;
-		
+		$parent_pk = $this->get_pk_name($parent);
+
 		$this->{$this->db_group}->where($link_table.'.'.$parent_pk, $id_parent);
-		$this->{$this->db_group}->where('id_media', $id);
+		$this->{$this->db_group}->where('id_media', $id_media);
 
 		$query = $this->{$this->db_group}->get($link_table);
 	
@@ -526,7 +537,7 @@ class Media_model extends Base_model
 		if ( ! empty($medias))
 		{
 			// Remove medias used by Extend Fields from medias to delete
-			$sql = "SET SESSION group_concat_max_len = 1000000;";
+			$sql = 'SET SESSION group_concat_max_len = 1000000;';
 			$this->{$this->db_group}->query($sql);
 
 			$sql = "
@@ -604,6 +615,22 @@ class Media_model extends Base_model
 			return 'video';
 
 		return 'file';
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
+	public function get_base_64($media=array())
+	{
+		log_message('error', print_r($media, TRUE));
+
+
+/*		if ($filename) {
+			$imgbinary = fread(fopen($filename, "r"), filesize($filename));
+			return 'data:image/' . $filetype
+			. ';base64,' . base64_encode($imgbinary);
+		}*/
 	}
 
 
@@ -734,13 +761,15 @@ class Media_model extends Base_model
 	public function delete_files($files=array())
 	{
 		$nb = 0;
-
-		foreach ($files as $path)
+		if(is_array($files)) 
 		{
-			if (file_exists(FCPATH.$path))
+			foreach ($files as $path)
 			{
-				@unlink(FCPATH.$path);
-			}
+				if (file_exists(FCPATH.$path))
+				{
+					@unlink(FCPATH.$path);
+				}
+			}	
 		}
 
 		return $nb;
@@ -801,16 +830,16 @@ class Media_model extends Base_model
 		else
 		{
 			$sql = "
-				update media
-				set path = REPLACE(path, '".$old_path."', '".$new_path."')
+				UPDATE media
+				SET path = REPLACE(path, '".$old_path."', '".$new_path."')
 			";
 			$this->{$this->db_group}->query($sql);
 		}
 
 		// Articles
 		$sql = "
-				update article_lang
-				set content = REPLACE(content, '".$old_path."', '".$new_path."')
+				UPDATE article_lang
+				SET content = REPLACE(content, '".$old_path."', '".$new_path."')
 			";
 		$this->{$this->db_group}->query($sql);
 	}
@@ -834,20 +863,20 @@ class Media_model extends Base_model
 			$filter = "= '".$path."'";
 
 
-		$sql = "
-			delete from page_media where id_media in
+		$sql = '
+			DELETE FROM page_media WHERE id_media IN
 			(
-				select id_media from media where path ".$filter."
+				SELECT id_media FROM media WHERE path '.$filter.'
 			)
-		";
+		';
 		$this->{$this->db_group}->query($sql);
 
-		$sql = "
-			delete from article_media where id_media in
+		$sql = '
+			DELETE FROM article_media WHERE id_media in
 			(
-				select id_media from media where path ".$filter."
+				SELECT id_media FROM media WHERE path '.$filter.'
 			)
-		";
+		';
 		$this->{$this->db_group}->query($sql);
 	}
 
@@ -1000,5 +1029,45 @@ class Media_model extends Base_model
 	{
 		if ( ! is_null($filter))
 			$this->{$this->db_group}->where('('.$filter.')');
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
+	private function _add_medias_infos($media_list)
+	{
+		foreach($media_list as &$_media)
+		{
+			$ext = pathinfo($_media['file_name'], PATHINFO_EXTENSION);
+
+			$_media['extension'] = $ext;
+
+			if (file_exists($_media['path']))
+			{
+				$_media['file_exists'] = TRUE;
+
+				if ($_media['type'] == 'picture')
+				{
+					list($width, $height, $img_type, $attr) = @getimagesize($_media['path']);
+
+					$_media['width'] = $width;
+					$_media['height'] = $height;
+					$_media['img_type'] = $img_type;
+				}
+				$_media['size'] = sprintf('%01.2f', filesize($_media['path']) / (1024 )) . 'ko';
+			}
+			else
+			{
+				$_media['file_exists'] = FALSE;
+
+				if ( ! empty($_media['provider']) && $_media['type'] == 'video')
+					$_media['extension'] = 'mpg';
+
+
+			}
+		}
+
+		return $media_list;
 	}
 }

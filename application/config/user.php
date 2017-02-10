@@ -36,6 +36,20 @@ $config['verify_user'] = true;
 
 /*
 |--------------------------------------------------------------------------
+| Confirmation code lifetime
+|--------------------------------------------------------------------------
+|
+| Default: 86400 - 1 day
+| Option: 0 - no expiration time
+|
+| Time in seconds until a code is getting invalid
+|
+*/
+$config['confirmation_code_lifetime'] = 86400;
+
+
+/*
+|--------------------------------------------------------------------------
 | Salt length
 |--------------------------------------------------------------------------
 |
@@ -91,12 +105,12 @@ $config['user_guest_role'] = 'guest';
 | same as if you would call restrict() with the array value.
 |
 | The avaible groups are by default:
-|  - super_admins
+|  - super_admin
 |  - admins
-|  - editors
-|  - users
+|  - editor
+|  - user
 |  - pending
-|  - guests
+|  - guest
 |  - banned
 |  - deactivated
 |

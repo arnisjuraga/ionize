@@ -1,4 +1,3 @@
-
 <!-- Main Column -->
 <div id="maincolumn">
 
@@ -22,6 +21,7 @@
 			<li id="api_settings"><a><?php /*echo lang('ionize_title_api'); */?></a></li>
 			-->
 			<li id="system_settings"><a><?php echo lang('ionize_title_system'); ?></a></li>
+			<li id="log_settings"><a>Log</a></li>
 
 		</ul>
 
@@ -116,6 +116,17 @@
 							<input <?php if($media_thumb_unsharp == 1) :?>checked="checked" <?php endif ;?> name="media_thumb_unsharp" id="media_thumb_unsharp"  class="inputcheckbox" type="checkbox" value="1" />
 						</dd>
 					</dl>
+					
+					<dl class="small">
+						<dt>
+							<a class="button light check-btn" id="media_thumbs_delete" href="javascript:void(0)" onclick="ION.sendData('media/delete_all_thumbs', true)">
+								<i class="icon-pictures"></i><?php echo lang('ionize_title_delete_thumbs'); ?>
+							</a>
+						</dt>
+						<dd>
+							<?php echo lang('ionize_text_delete_thumbs'); ?>
+						</dd>
+					</dl>					
 
 				</div>
 				
@@ -187,8 +198,8 @@
 
 
 				</div>
-			
-			</form>			
+
+			</form>
 
 		</div>		
 		
@@ -299,8 +310,9 @@
                 <h3><?php echo lang('ionize_title_db_backup'); ?></h3>
 
                 <p>
-
-                    <a class="button light" id="bdBackup" href="<?php echo admin_url(); ?>setting/backup_database"><i class="icon-database"></i><?php echo lang('ionize_label_db_backup'); ?></a>
+                    <a class="button light" id="bdBackup" href="<?php echo admin_url(); ?>setting/backup_database">
+						<i class="icon-database"></i><?php echo lang('ionize_label_db_backup'); ?>
+					</a>
                 </p>
 
 			</div>
@@ -327,13 +339,14 @@
                         </dt>
                         <dd>
                             <select name="db_driver" id="db_driver" class="select">
-                                <option <?php if ($this->db->platform() == 'mysql'):?>selected="selected"<?php endif;?>  value="mysql">MySQL</option>
-                                <option <?php if ($this->db->platform() == 'mysqli'):?>selected="selected"<?php endif;?>  value="mysqli">MySQLi</option>
-                                <option <?php if ($this->db->platform() == 'mssql'):?>selected="selected"<?php endif;?>  value="mssql">MS SQL</option>
-                                <option <?php if ($this->db->platform() == 'postgre'):?>selected="selected"<?php endif;?>  value="postgre">Postgre SQL</option>
-                                <option <?php if ($this->db->platform() == 'oci8'):?>selected="selected"<?php endif;?>  value="oci8">Oracle</option>
-                                <option <?php if ($this->db->platform() == 'sqlite'):?>selected="selected"<?php endif;?>  value="sqlite">SQLite</option>
-                                <option <?php if ($this->db->platform() == 'odbc'):?>selected="selected"<?php endif;?>  value="odbc">ODBC</option>
+								<?php $dbPlatform = $this->db->platform(); ?>
+                                <option <?php if ($dbPlatform === 'mysql'):?>selected="selected"<?php endif;?>  value="mysql">MySQL</option>
+                                <option <?php if ($dbPlatform === 'mysqli'):?>selected="selected"<?php endif;?>  value="mysqli">MySQLi</option>
+                                <option <?php if ($dbPlatform === 'mssql'):?>selected="selected"<?php endif;?>  value="mssql">MS SQL</option>
+                                <option <?php if ($dbPlatform === 'postgre'):?>selected="selected"<?php endif;?>  value="postgre">Postgre SQL</option>
+                                <option <?php if ($dbPlatform === 'oci8'):?>selected="selected"<?php endif;?>  value="oci8">Oracle</option>
+                                <option <?php if ($dbPlatform === 'sqlite'):?>selected="selected"<?php endif;?>  value="sqlite">SQLite</option>
+                                <option <?php if ($dbPlatform === 'odbc'):?>selected="selected"<?php endif;?>  value="odbc">ODBC</option>
                             </select>
                         </dd>
                     </dl>
@@ -407,9 +420,9 @@
 					</dt>
 					<dd>
 						<select name="protocol" id="emailProtocol" class="select">
-							<option <?php if ($protocol == 'smtp'):?>selected="selected"<?php endif;?> value="smtp">SMTP</option>
-							<option <?php if ($protocol == 'mail'):?>selected="selected"<?php endif;?> value="mail">Mail</option>
-							<option <?php if ($protocol == 'sendmail'):?>selected="selected"<?php endif;?>  value="sendmail">SendMail</option>
+							<option <?php if ($protocol === 'smtp'):?>selected="selected"<?php endif;?> value="smtp">SMTP</option>
+							<option <?php if ($protocol === 'mail'):?>selected="selected"<?php endif;?> value="mail">Mail</option>
+							<option <?php if ($protocol === 'sendmail'):?>selected="selected"<?php endif;?>  value="sendmail">SendMail</option>
 						</select>
 					</dd>
 				</dl>
@@ -496,12 +509,38 @@
 					</dt>
 					<dd>
 						<select name="mailtype" id="mailtype" class="select">
-							<option <?php if ($mailtype == 'text'):?>selected="selected"<?php endif;?> value="text">Text</option>
-							<option <?php if ($mailtype == 'html'):?>selected="selected"<?php endif;?> value="html">HTML</option>
+							<option <?php if ($mailtype === 'text'):?>selected="selected"<?php endif;?> value="text">Text</option>
+							<option <?php if ($mailtype === 'html'):?>selected="selected"<?php endif;?> value="html">HTML</option>
 						</select>
 					</dd>
 				</dl>
 			
+				<!-- Newline -->
+				<dl>
+					<dt>
+						<label for="newline"><?php echo lang('ionize_label_email_newline'); ?></label>
+					</dt>
+					<dd>
+						<select name="newline" id="newline" class="select">
+							<option <?php if ($newline == "\n"):?>selected="selected"<?php endif;?> value="\n">\n</option>
+							<option <?php if ($newline == "\r\n"):?>selected="selected"<?php endif;?> value="\r\n">\r\n</option>
+						</select>
+					</dd>
+				</dl>
+
+				<!-- CRLF -->
+				<dl>
+					<dt>
+						<label for="crlf">CRLF</label>
+					</dt>
+					<dd>
+						<select name="crlf" id="crlf" class="select">
+							<option <?php if ($crlf == "\n"):?>selected="selected"<?php endif;?> value="\n">\n</option>
+							<option <?php if ($crlf == "\r\n"):?>selected="selected"<?php endif;?> value="\r\n">\r\n</option>
+						</select>
+					</dd>
+				</dl>
+
 			</form>
 		</div>
 
@@ -631,7 +670,7 @@
 				
 				
 				<!-- Admin URL -->
-				<h3 class="toggler"><?php echo lang('ionize_title_admin_url'); ?></h3>
+				<h3 class="toggler"><?php echo lang('ionize_title_admin_panel'); ?></h3>
 				
 				<div class="element">
 				
@@ -644,6 +683,19 @@
 							<dd>
 								<input id="admin_url" name="admin_url" class="inputtext w120" value="<?php echo config_item('admin_url'); ?>" /><br/>
 								<p class="lite pl10"><?php echo lang('ionize_onchange_ionize_settings'); ?></p>
+							</dd>
+						</dl>
+
+						<dl>
+							<dt>
+								<label class="nowrap"><?php echo lang('ionize_title_admin_overlay_position') ?></label>
+							</dt>
+							<dd>
+								<?php $overlayPosition = (int) config_item('admin_overlay_position'); ?>
+								<label for="panel_left"><?php echo ucfirst(lang('ionize_label_left')) ?></label>
+								<input <?php if ($overlayPosition !== 1):?>checked="checked"<?php endif;?> type="radio" name="overlay_position" id="panel_left" value="0" />
+								<label for="panel_right"><?php echo ucfirst(lang('ionize_label_right')) ?></label>
+								<input <?php if ($overlayPosition === 1):?>checked="checked"<?php endif;?> type="radio" name="overlay_position" id="panel_right" value="1" />
 							</dd>
 						</dl>
 			
@@ -669,20 +721,20 @@
 						<!-- Maintenance ? -->
 						<dl>
 							<dt>
-								<label for="maintenance" title="<?php echo lang('ionize_label_maintenance_help'); ?>"><?php echo lang('ionize_label_maintenance'); ?></label>
+								<label class="nowrap" for="maintenance" title="<?php echo lang('ionize_label_maintenance_help'); ?>"><?php echo lang('ionize_label_maintenance'); ?></label>
 							</dt>
 							<dd>
-								<input class="inputcheckbox" <?php if (config_item('maintenance') == '1'):?>checked="checked"<?php endif;?> type="checkbox" name="maintenance" id="maintenance" value="1" />
+								<input class="nowrap inputcheckbox" <?php if (config_item('maintenance') == '1'):?>checked="checked"<?php endif;?> type="checkbox" name="maintenance" id="maintenance" value="1" />
 							</dd>
 						</dl>
 						
 						<!-- Maintenance IP restrict -->
 						<dl>
 							<dt>
-								<label for="maintenance_ips" title="<?php echo lang('ionize_label_maintenance_ips_help'); ?>"><?php echo lang('ionize_label_maintenance_ips'); ?></label>
+								<label class="nowrap" for="maintenance_ips" title="<?php echo lang('ionize_label_maintenance_ips_help'); ?>"><?php echo lang('ionize_label_maintenance_ips'); ?></label>
 							</dt>
 							<dd>
-								<span><?php echo lang('ionize_label_your_ip'); ?> : <?php echo $_SERVER['REMOTE_ADDR']; ?></span><br/>
+								<span><?php echo lang('ionize_label_your_ip'); ?>: <?php echo $_SERVER['REMOTE_ADDR']; ?></span><br/>
 								<textarea name="maintenance_ips" id="maintenance_ips" class="h50 w140"><?php echo (! empty($maintenance_ips)) ? $maintenance_ips : $_SERVER['REMOTE_ADDR']; ?></textarea>
 							</dd>
 						</dl>
@@ -692,7 +744,7 @@
 							
 							<dl>
 								<dt>
-									<label title="<?php echo lang('ionize_label_maintenance_page_help'); ?>"><?php echo lang('ionize_title_maintenance_page'); ?></label>
+									<label class="nowrap" title="<?php echo lang('ionize_label_maintenance_page_help'); ?>"><?php echo lang('ionize_title_maintenance_page'); ?></label>
 								</dt>
 								<dd>
 									<div id="maintenancePageContainer"></div>
@@ -715,19 +767,35 @@
 				</div>
 
                 <!-- Compress HTML Output -->
-                <h3 class="toggler"><?php echo lang('ionize_title_compress_html_output'); ?></h3>
+                <h3 class="toggler"><?php echo lang('ionize_title_html_output'); ?></h3>
 
                 <div class="element">
 
-                    <form name="compressHtmlOutputForm" id="compressHtmlOutputForm" method="post" action="<?php echo admin_url(); ?>setting/save_compress_html_output" class="mb20">
+                    <form name="compressHtmlOutputForm" id="compressHtmlOutputForm" method="post" action="<?php echo admin_url(); ?>setting/save_html_output" class="mb20">
 
                         <!-- Maintenance ? -->
                         <dl>
                             <dt>
-                                <label for="compress_html_output" title="<?php echo lang('ionize_label_compress_html_output_help'); ?>"><?php echo lang('ionize_label_compress_html_output'); ?></label>
+                                <label class="nowrap" for="default_html_output" title="<?php echo lang('ionize_label_default_html_output_help'); ?>"><?php echo lang('ionize_label_default_html_output'); ?></label>
                             </dt>
                             <dd>
-                                <input class="inputcheckbox" <?php if (config_item('compress_html_output') == '1'):?>checked="checked"<?php endif;?> type="checkbox" name="compress_html_output" id="compress_html_output" value="1" />
+                                <input <?php if (config_item('compress_html_output') == '0' && config_item('beautify_html_output') == '0'):?>checked="checked"<?php endif;?> type="radio" name="html_output" id="default_html_output" value="0" />
+                            </dd>
+                        </dl>
+						<dl>
+                            <dt>
+                                <label class="nowrap" for="compress_html_output" title="<?php echo lang('ionize_label_compress_html_output_help'); ?>"><?php echo lang('ionize_label_compress_html_output'); ?></label>
+                            </dt>
+                            <dd>
+                                <input <?php if (config_item('compress_html_output') == '1'):?>checked="checked"<?php endif;?> type="radio" name="html_output" id="compress_html_output" value="1" />
+                            </dd>
+                        </dl>
+						<dl>
+                            <dt>
+                                <label class="nowrap" for="beautify_html_output" title="<?php echo lang('ionize_label_beautify_html_output_help'); ?>"><?php echo lang('ionize_label_beautify_html_output'); ?></label>
+                            </dt>
+                            <dd>
+                                <input <?php if (config_item('beautify_html_output') == '1'):?>checked="checked"<?php endif;?> type="radio" name="html_output" id="beautify_html_output" value="2" />
                             </dd>
                         </dl>
 
@@ -745,38 +813,96 @@
                 </div>
 			</div>		
 		</div>		
+
+		<div class="tabcontent pt20">
+			<form name="logForm" id="logForm" method="post" action="<?php echo admin_url(); ?>setting/save_log_settings">
+
+				<dl>
+					<dt>
+						<label for="log_threshold">Log Mode</label>
+					</dt>
+					<dd>
+						<?php
+						$current_log_mode = config_item('log_threshold');
+
+						$log_modes = array(
+							'0' => 'Disables logging, Error logging TURNED OFF',
+							'1' => 'Error Messages (including PHP errors)',
+							'2' => 'Debug Messages',
+							'3' => 'Informational Messages',
+							'4' => 'All Messages',
+						)
+						?>
+						<select id="log_threshold" name="log_threshold" class="inputtext">
+							<?php foreach($log_modes as $id => $log_mode): ?>
+								<option value="<?php echo $id ?>" <?php if ($current_log_mode == $id) : ?>selected="selected"<?php endif;?>><?php echo $log_mode ?></option>
+							<?php endforeach; ?>
+						</select>
+					</dd>
+				</dl>
+
+				<dl>
+					<dt>
+						<label for="log_nb_lines">Nb Lines</label>
+					</dt>
+					<dd>
+						<input id="log_nb_lines" name="log_nb_lines" type="text" class="inputtext" value="<?php echo config_item('log_nb_lines') ?>" />
+					</dd>
+				</dl>
+				<dl>
+					<dt></dt>
+					<dd>
+						<a id="submit_log" class="button green"><?php echo lang('ionize_button_save'); ?></a>
+					</dd>
+				</dl>
+
+				<dl class="mt20">
+					<dt>
+						<label>See Log</label>
+					</dt>
+					<dd>
+						<a id="see_log" class="button blue">Open Log Window</a>
+					</dd>
+				</dl>
+
+			</form>
+
+		</div>
 	</div>
 </div> <!-- /maincolumn -->
 
 
 <script type="text/javascript">
 
-
 	var mailpath = '<?php echo $mailpath ?>';
 
 	// Panel toolbox
 	ION.initToolbox('empty_toolbox');
 
-
 	// Options Accordion
 	ION.initAccordion('.toggler', 'div.element', true, 'settingsAccordion1');
 	ION.initAccordion('.toggler1', 'div.element1', false, 'settingsAccordion2');
 
-
 	var settingsTab = new TabSwapper({tabsContainer: 'settingsTab', sectionsContainer: 'settingsTabContent', selectedClass: 'selected', deselectedClass: '', tabs: 'li', clickers: 'li a', sections: 'div.tabcontent', cookieName: 'settingsTab' });
 
-
 	// Forms actions
-	ION.setFormSubmit('databaseForm', 'submit_database', 'setting/save_database/true', 'mainPanel', 'setting/technical');
-	ION.setFormSubmit('emailForm', 'submit_email', 'setting/save_emails_settings/true', 'mainPanel', 'setting/technical');
-	ION.setFormSubmit('cacheForm', 'submit_cache', 'setting/save_cache', 'mainPanel', 'setting/technical');
-	ION.setFormSubmit('maintenanceForm', 'submit_maintenance', 'setting/save_maintenance', 'mainPanel', 'setting/technical');
-    ION.setFormSubmit('compressHtmlOutputForm', 'submit_compress_html_output', 'setting/save_compress_html_output', 'mainPanel', 'setting/technical');
+	ION.setFormSubmit('databaseForm', 'submit_database', 'setting/save_database/true');
+	ION.setFormSubmit('emailForm', 'submit_email', 'setting/save_emails_settings/true');
+	ION.setFormSubmit('cacheForm', 'submit_cache', 'setting/save_cache');
+	ION.setFormSubmit('maintenanceForm', 'submit_maintenance', 'setting/save_maintenance');
+    ION.setFormSubmit('compressHtmlOutputForm', 'submit_compress_html_output', 'setting/save_html_output');
 	ION.setFormSubmit('settingsMediasForm', 'settingsMediasFormSubmit', 'setting/save_medias');
 	ION.setFormSubmit('articleSettingsForm', 'articleSettingsFormSubmit', 'setting/save_article');
 	ION.setFormSubmit('keysSettingsForm', 'keysSettingsFormSubmit', 'setting/save_keys');
+	ION.setFormSubmit('logForm', 'submit_log', 'setting/save_log', 'mainPanel', 'setting/technical');
 
 	ION.initRequestEvent($('clear_cache'), 'setting/clear_cache');
+
+	// See log
+	$('see_log').addEvent('click', function()
+	{
+		window.open(ION.adminUrl + 'log');
+	});
 
 	// Admin URL form action
 	ION.addConfirmation(
@@ -788,15 +914,15 @@
 		},
 		Lang.get('ionize_confirm_change_admin_url')
 	);
-	
+
 	$('antispamRefresh').addEvent('click', function(e)
 	{
 		e.stop();
 		var key = ION.generateKey(32);
-		$('form_antispam_key').value = key;
-		$('form_antispam_key').highlight();
+		var keyField = $('form_antispam_key');
+		keyField.value = key;
+		keyField.highlight();
 	});
-
 
 	// Restore tinyButtons toolbar to default config
 	$('texteditor_default').addEvent('click', function()
@@ -819,20 +945,19 @@
 		$('tinyblockformats').value = 'p,h2,h3,h4,h5,pre,div';
 	});
 
-
 	// Show / hides Email details depending on the selected protocol
 	changeEmailDetails = function()
 	{
 		var protocol = $('emailProtocol').value;
 
-		if (protocol == 'mail')
+		if (protocol === 'mail')
 		{
 			$('emailSMTPDetails').hide();
 			$('emailSendmailDetails').hide();
 		}
-		else if (protocol == 'sendmail')
+		else if (protocol === 'sendmail')
 		{
-			if (mailpath == '')
+			if (mailpath === '')
 				$('mailpath').value = '/usr/sbin/sendmail';
 
 			$('emailSMTPDetails').hide();
@@ -843,7 +968,7 @@
 			$('emailSMTPDetails').show();
 			$('emailSendmailDetails').hide();
 		}
-	}
+	};
 	changeEmailDetails();
 
 	$('emailProtocol').addEvent('change', function()
@@ -851,19 +976,18 @@
 		changeEmailDetails();
 	});
 
-
 	// Make each tree page draggable to the maintenance page container
 	if ($('maintenancePageContainer'))
 	{
 		// Get the maintenance page
-		ION.HTML(admin_url + 'setting/get_maintenance_page', {}, {'update': 'maintenancePageContainer'});
+		ION.HTML(ION.adminUrl + 'setting/get_maintenance_page', {}, {'update': 'maintenancePageContainer'});
 		
 		
 		// Callbak when page is dropped
 		setMaintenancePage = function(element, droppable, event)
 		{
-			ION.HTML(admin_url + 'setting/set_maintenance_page', {'id_page': element.getProperty('rel')}, {'update': 'maintenancePageContainer'});
-		}
+			ION.HTML(ION.adminUrl + 'setting/set_maintenance_page', {'id_page': element.getProperty('rel')}, {'update': 'maintenancePageContainer'});
+		};
 		
 		// Make tree pages draggable
 		$$('.treeContainer .page a.title').each(function(item, idx)
@@ -885,9 +1009,10 @@
 	}
 
 	// New API key button
-	if ($('buttonNewApiKey'))
+	var buttonNewApiKey = $('buttonNewApiKey');
+	if (buttonNewApiKey)
 	{
-		$('buttonNewApiKey').addEvent('click', function()
+		buttonNewApiKey.addEvent('click', function()
 		{
 			ION.formWindow(
 				'apiKey',
@@ -904,5 +1029,4 @@
 
 	// Save with CTRL+s
 	ION.addFormSaveEvent('settingsFormSubmit');
-
 </script>

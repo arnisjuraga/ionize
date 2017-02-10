@@ -57,12 +57,12 @@ if ( ! function_exists('form_build_field'))
 					// Checkbox (on / off)
 					if ($field['length'] == 1)
 					{
-						$html_type = "checkbox";
+						$html_type = 'checkbox';
 					}
 					// Input
 					else
 					{
-						$html_type = "input";
+						$html_type = 'input';
 					}
 					break;
 
@@ -70,32 +70,32 @@ if ( ! function_exists('form_build_field'))
 				case 'int':
 				case 'char':
 				case 'tinytext':
-					$html_type = "input";
+					$html_type = 'input';
 					break;
 
 				case 'varchar':
 				case 'text':
 				case 'longtext':
-					if ($field_type == 'varchar' && $field['length'] < 255)
-						$html_type = "input";
-					elseif ($field_type == 'varchar' && $field['length'] < 3000)
-						$html_type = "textarea";
+					if ($field_type === 'varchar' && $field['length'] < 255)
+						$html_type = 'input';
+					elseif ($field_type === 'varchar' && $field['length'] < 3000)
+						$html_type = 'textarea';
 					else
-						$html_type = "html";
+						$html_type = 'html';
 
 					break;
 
 				case 'enum':
-					$html_type = "radio";
+					$html_type = 'radio';
 					break;
 
 				case 'date':
 				case 'datetime':
-					$html_type = "date";
+					$html_type = 'date';
 					break;
 
 				default:
-					$html_type = "input";
+					$html_type = 'input';
 			}
 		}
 
@@ -105,7 +105,7 @@ if ( ! function_exists('form_build_field'))
 			$data = array();
 
 			// Try to get the ENUM possible values
-			if ($field_type == 'enum')
+			if ($field_type === 'enum')
 			{
 				foreach($field['length'] as $enum)
 					$data[$enum] = $enum;
@@ -161,7 +161,7 @@ if ( ! function_exists('form_build_field'))
 				{
 					$id = 'c_'.uniqid();
 					$extra2 = $extra . ' id="'.$id.'"';
-					$checked = ($field_value == $value) ? TRUE : FALSE;
+					$checked = ($field_value == $value);
 					if ($print_label === TRUE)
 						$str .= form_label($label, $id);
 					$str .= form_checkbox($field_name, $value, $checked, $extra2);
@@ -185,7 +185,7 @@ if ( ! function_exists('form_build_field'))
 				{
 					$id = 'r_'.uniqid();
 					$extra2 = $extra . ' id="'.$id.'"';
-					$checked = ($field_value == $value) ? TRUE : FALSE;
+					$checked = ($field_value == $value);
 					if ($print_label === TRUE)
 						$str .= form_label($label, $id);
 					$str .= form_radio($field_name, $value, $checked, $extra2);
@@ -196,7 +196,7 @@ if ( ! function_exists('form_build_field'))
 			case 'date':
 				$extra .= ' class="inputtext date"';
 
-				if ($field['type'] == 'datetime')
+				if ($field['type'] === 'datetime')
 					$field_value = humanize_mdate($field_value, Settings::get('date_format'). ' %H:%i:%s');
 				else
 					$field_value = humanize_mdate($field_value, Settings::get('date_format'));

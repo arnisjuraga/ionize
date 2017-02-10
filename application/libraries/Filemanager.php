@@ -439,7 +439,7 @@ class MTFMCache
 class FileManager
 {
 	protected $options;
-	
+
 	protected $getid3;
 	protected $getid3_cache;
 	protected $icon_cache;              // cache the icon paths per size (large/small) and file extension
@@ -1042,8 +1042,6 @@ class FileManager
 
 			$legal_url = $this->get_legal_url($dir_arg . '/');
 
-			$is_dir = is_dir($legal_url);
-
 			if ( ! empty($file_arg))
 			{
 				$filename = basename($file_arg);
@@ -1077,6 +1075,8 @@ class FileManager
 				throw new Exception('validation_failure');
 			}
 
+			$full_path = $this->get_full_path($legal_url);
+			$is_dir = is_dir($full_path);
 
 			if ( ! $this->unlink($legal_url))
 			{
@@ -1087,7 +1087,7 @@ class FileManager
 			Event::fire(
 				'Filemanager.destroy.success',
 				array(
-					'path' => $this->get_full_path($legal_url),
+					'path' => $full_path,
 					'is_dir'=>$is_dir
 				)
 			);
@@ -1417,6 +1417,10 @@ class FileManager
 		$max_upload = self::convert_size(ini_get('upload_max_filesize'));
 		$max_post = self::convert_size(ini_get('post_max_size'));
 		$memory_limit = self::convert_size(ini_get('memory_limit'));
+		if( $memory_limit < 0 )
+		{
+			$memory_limit = max($max_upload, $max_post);
+		}
 		$limit = min($max_upload, $max_post, $memory_limit);
 
 		$headers = $this->getHttpHeaders();
@@ -1424,7 +1428,7 @@ class FileManager
 
 		$resize = (bool) ! empty($headers['X-Resize']) ? $headers['X-Resize'] : FALSE;
 		$resume_flag = ! empty($headers['X-File-Resume']) ? FILE_APPEND : 0;
-		$replace = (! empty($headers['X-Replace']) && $headers['X-Replace'] == 1 ) ? TRUE : FALSE;
+		$replace = (! empty($headers['X-Replace']) && $headers['X-Replace'] == 1 );
 
 		// Prepare the response
 		$response = array(
@@ -1456,10 +1460,17 @@ class FileManager
 			$legal_dir_url = $this->get_legal_url($directory . '/');
 			$dir = $this->get_full_path($legal_dir_url);
 
+			// Creates safe file names
+			if ($this->options['cleanFileName'])
+			{
+				$filename = $this->cleanFilename($filename);
+			}
+
 			// No resume, no replace : Get one unique filename
+			// We must do it _after_ cleanFilename because it changes the filename
 			if ( ! $resume_flag && ! $replace)
 			{
-				$filename = $this->getUniqueName($response['name'], $dir);
+				$filename = $this->getUniqueName($filename, $dir);
 			}
 
 			// Authorization callback
@@ -1481,12 +1492,6 @@ class FileManager
 			)
 			{
 				throw new Exception('authorized');
-			}
-
-			// Creates safe file names
-			if ($this->options['cleanFileName'])
-			{
-				$filename = $this->cleanFilename($filename);
 			}
 
 			// clean is finished, set the filename for DropZone
@@ -1530,7 +1535,7 @@ class FileManager
 
 					// Resize after upload if asked
 					$mime = $this->getMimeFromExtension($filename);
-					if ($this->startsWith($mime, 'image/') && $resize == TRUE)
+					if ($this->startsWith($mime, 'image/') && $resize === TRUE)
 					{
 						$this->resizePicture($file_path);
 					}
@@ -1590,13 +1595,13 @@ class FileManager
 
 					$filename = $response['name'];
 
+					// Creates safe file names
+					if ($this->options['cleanFileName'])
+						$filename = $this->cleanFilename($filename, '_');
+
 					// Replace the file ?
 					if ( ! $replace)
-						$filename = $this->getUniqueName($response['name'], $dir);
-
-                    // Creates safe file names
-                    if ($this->options['cleanFileName'])
-                        $filename = $this->cleanFilename($file['name'], '_');
+						$filename = $this->getUniqueName($filename, $dir);
 
 					// Allowed extension ?
 					if ( ! $this->isAllowedExtension($filename))
@@ -1636,7 +1641,7 @@ class FileManager
 
 						// Resize after upload if asked
 						$mime = $this->getMimeFromExtension($filename);
-						if ($this->startsWith($mime, 'image/') && $resize == TRUE)
+						if ($this->startsWith($mime, 'image/') && $resize === TRUE)
 						{
 							$this->resizePicture($file_path);
 						}
@@ -1697,14 +1702,14 @@ class FileManager
 
         foreach ($_SERVER as $name => $value)
         {
-            if (substr($name, 0, 5) == 'HTTP_')
+            if (substr($name, 0, 5) === 'HTTP_')
             {
                 $name = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))));
                 $headers[$name] = $value;
-            } else if ($name == "CONTENT_TYPE") {
-                $headers["Content-Type"] = $value;
-            } else if ($name == "CONTENT_LENGTH") {
-                $headers["Content-Length"] = $value;
+            } else if ($name === 'CONTENT_TYPE') {
+                $headers['Content-Type'] = $value;
+            } else if ($name === 'CONTENT_LENGTH') {
+                $headers['Content-Length'] = $value;
             }
         }
         return $headers;
@@ -1800,6 +1805,8 @@ class FileManager
 						$newdir = $dir;
 
 						$newname = basename($newname_arg);
+						$newname = $this->cleanFilename($newname, '_', TRUE);
+
 						if ($is_dir)
 							$newname = $this->getUniqueName(array('filename' => $newname), $newdir);  // a directory has no 'extension'
 						else
@@ -2048,85 +2055,113 @@ class FileManager
 		$check_for_embedded_img = FALSE;
 
 		$mime_els = explode('/', $mime);
+		$mime_els_1 = ! empty($mime_els[1]) ? $mime_els[1] : NULL;
+
 		for(;;) // bogus loop; only meant to assist the [mime remapping] state machine in here
 		{
 			switch ($mime_els[0])
 			{
 				case 'image':
-					$emsg = NULL;
-					try
+
+					// SVG
+					if ($mime_els_1 == 'svg+xml')
 					{
-						if (empty($thumb250))
-							$thumb250 = $this->getThumb($meta, $file, $this->options['thumbBigSize'], $this->options['thumbBigSize'], $auto_thumb_gen_mode);
+						$emsg = NULL;
 
-						if (empty($thumb48))
-							$thumb48 = $this->getThumb($meta, (!empty($thumb250) ? $this->url_path2file_path($thumb250) : $file), $this->options['thumbSmallSize'], $this->options['thumbSmallSize'], $auto_thumb_gen_mode);
+						$thumb48 = $thumb250 = $url;
 
-						if (empty($thumb48) || empty($thumb250))
-						{
-							// Partikule
-							// TODO : See what to do with that
-							$imginfo = Image::checkFileForProcessing($file);
-						}
+						$width = round($this->getID3infoItem($fi, 0, 'video', 'resolution_x'));
+						$height = round($this->getID3infoItem($fi, 0, 'video', 'resolution_y'));
+						$json['width'] = $width;
+						$json['height'] = $height;
+
+						// Failure before : we only will have the icons. Use them.
+						$preview_HTML = '<a target="_blank" href="' . $this->getElementURL($url) . '" title="' . htmlentities($filename, ENT_QUOTES, 'UTF-8') . '">
+											<img src="' . $this->getElementURL($thumb48) . '" class="preview" alt="preview" />
+										</a>';
+
 						$thumbnails_done_or_deferred = TRUE;
 					}
-					catch (Exception $e)
+					// Other images
+					else
 					{
-						$emsg = $e->getMessage();
-						$icon48 = $this->getIconForError($emsg, $legal_url, FALSE);
-						$icon = $this->getIconForError($emsg, $legal_url, TRUE);
-						// even cache the fail: that means next time around we don't suffer the failure
-						// but immediately serve the error icon instead.
-					}
+						$emsg = NULL;
+						try
+						{
+							if (empty($thumb250))
+								$thumb250 = $this->getThumb($meta, $file, $this->options['thumbBigSize'], $this->options['thumbBigSize'], $auto_thumb_gen_mode);
 
-					$width = round($this->getID3infoItem($fi, 0, 'video', 'resolution_x'));
-					$height = round($this->getID3infoItem($fi, 0, 'video', 'resolution_y'));
-					$json['width'] = $width;
-					$json['height'] = $height;
+							if (empty($thumb48))
+								$thumb48 = $this->getThumb($meta, (!empty($thumb250) ? $this->url_path2file_path($thumb250) : $file), $this->options['thumbSmallSize'], $this->options['thumbSmallSize'], $auto_thumb_gen_mode);
 
-					$content .= '
+							if (empty($thumb48) || empty($thumb250))
+							{
+								// Partikule
+								// TODO : See what to do with that
+								$imginfo = Image::checkFileForProcessing($file);
+							}
+							$thumbnails_done_or_deferred = TRUE;
+						}
+						catch (Exception $e)
+						{
+							$emsg = $e->getMessage();
+							$icon48 = $this->getIconForError($emsg, $legal_url, FALSE);
+							$icon = $this->getIconForError($emsg, $legal_url, TRUE);
+							// even cache the fail: that means next time around we don't suffer the failure
+							// but immediately serve the error icon instead.
+						}
+
+						$width = round($this->getID3infoItem($fi, 0, 'video', 'resolution_x'));
+						$height = round($this->getID3infoItem($fi, 0, 'video', 'resolution_y'));
+						$json['width'] = $width;
+						$json['height'] = $height;
+
+						$content .= '
 							<dt>${width}</dt><dd>' . $width . 'px</dd>
 							<dt>${height}</dt><dd>' . $height . 'px</dd>
 						</dl>';
-					$content_dl_term = TRUE;
+						$content_dl_term = TRUE;
 
-					// If thumb generation is delayed, we need to infer the thumbnail dimensions *anyway*!
-					if (empty($thumb48) && $thumbnails_done_or_deferred)
-					{
-						$dims = $this->predictThumbDimensions($width, $height, $this->options['thumbSmallSize'], $this->options['thumbSmallSize']);
-
-						$json['thumb48_width'] = $dims['width'];
-						$json['thumb48_height'] = $dims['height'];
-					}
-					if (empty($thumb250))
-					{
-						if ($thumbnails_done_or_deferred)
+						// If thumb generation is delayed, we need to infer the thumbnail dimensions *anyway*!
+						if (empty($thumb48) && $thumbnails_done_or_deferred)
 						{
-							$json['thumb250_width'] = $this->options['thumbBigSize'];
-							$json['thumb250_height'] = $this->options['thumbBigSize'];
+							$dims = $this->predictThumbDimensions($width, $height, $this->options['thumbSmallSize'], $this->options['thumbSmallSize']);
+
+							$json['thumb48_width'] = $dims['width'];
+							$json['thumb48_height'] = $dims['height'];
 						}
-						else
+
+						if (empty($thumb250))
 						{
-							// Failure before : we only will have the icons. Use them.
-							$preview_HTML = '<a href="' . $this->getElementURL($url) . '" title="' . htmlentities($filename, ENT_QUOTES, 'UTF-8') . '">
+							if ($thumbnails_done_or_deferred)
+							{
+								$json['thumb250_width'] = $this->options['thumbBigSize'];
+								$json['thumb250_height'] = $this->options['thumbBigSize'];
+							}
+							else
+							{
+								// Failure before : we only will have the icons. Use them.
+								$preview_HTML = '<a target="_blank" href="' . $this->getElementURL($url) . '" title="' . htmlentities($filename, ENT_QUOTES, 'UTF-8') . '">
 												<img src="' . $this->getElementURL($icon48) . '" class="preview" alt="preview" />
 											</a>';
+							}
 						}
-					}
-					// else: defer the $preview_HTML production until we're at the end of this and have fetched the actual thumbnail dimensions
+						// else: defer the $preview_HTML production until we're at the end of this and have fetched the actual thumbnail dimensions
 
-					if ( ! empty($emsg))
-					{
-						// use the abilities of modify_json4exception() to munge/format the exception message:
-						$jsa = array('error' => '');
-						$this->modify_json4exception($jsa, $emsg, 'path = ' . $url);
-
-						if (strpos($emsg, 'img_will_not_fit') !== FALSE)
+						if ( ! empty($emsg))
 						{
-							$earr = explode(':', $emsg, 2);
-							$postdiag_HTML .= '<p class="tech_info">Estimated minimum memory requirements to create thumbnails for this image: ' . $earr[1] . '</p>';
+							// use the abilities of modify_json4exception() to munge/format the exception message:
+							$jsa = array('error' => '');
+							$this->modify_json4exception($jsa, $emsg, 'path = ' . $url);
+
+							if (strpos($emsg, 'img_will_not_fit') !== FALSE)
+							{
+								$earr = explode(':', $emsg, 2);
+								$postdiag_HTML .= '<p class="tech_info">Estimated minimum memory requirements to create thumbnails for this image: ' . $earr[1] . '</p>';
+							}
 						}
 					}
+
 					break;
 
 				case 'text':
@@ -2344,18 +2379,24 @@ class FileManager
 		}
 
 		// also provide X/Y size info with each direct-access thumbnail file:
-		if (!empty($thumb250))
+		if ( ! empty($thumb250))
 		{
 			$thumb250_uri = $this->getElementURL($thumb250);
 			$json['thumb250'] = $thumb250_uri;
 			$meta->store('thumb250_direct', $thumb250_uri);
 
 			$tnsize = $meta->fetch('thumb250_info');
-			if (empty($tnsize))
+
+			if (empty($tnsize) && $mime_els_1 != 'svg+xml')
 			{
 				$tnsize = getimagesize($this->url_path2file_path($thumb250));
 				$meta->store('thumb250_info', $tnsize);
 			}
+			if (empty($tnsize) && $mime_els_1 == 'svg+xml')
+			{
+				$tnsize = array(500,500);
+			}
+
 			if (is_array($tnsize))
 			{
 				$json['thumb250_width'] = $tnsize[0];
@@ -2378,11 +2419,16 @@ class FileManager
 			$meta->store('thumb48_direct', $thumb48_uri);
 
 			$tnsize = $meta->fetch('thumb48_info');
-			if (empty($tnsize))
+			if (empty($tnsize) && $mime_els_1 != 'svg+xml')
 			{
 				$tnsize = getimagesize($this->url_path2file_path($thumb48));
 				$meta->store('thumb48_info', $tnsize);
 			}
+			if (empty($tnsize) && $mime_els_1 == 'svg+xml')
+			{
+				$tnsize = array(120,120);
+			}
+
 			if (is_array($tnsize))
 			{
 				$json['thumb48_width'] = $tnsize[0];
@@ -2422,6 +2468,9 @@ class FileManager
 		}
 
 		$json['content'] = $content;
+
+
+
 		return array_merge((is_array($json_in) ? $json_in : array()), $json);
 	}
 
@@ -2684,7 +2733,7 @@ class FileManager
 			$i = 1;
 			if (preg_match('/^(.*)_([1-9][0-9]*)$/', $filename, $matches))
 			{
-				$i = intval($matches[2]);
+				$i = (int) $matches[2];
 				if ('P'.$i !== 'P'.$matches[2] || $i > 100000)
 				{
 					// very large number: not a sequence number!
@@ -2781,7 +2830,7 @@ class FileManager
 			// generally save as lossy / lower-Q jpeg to reduce filesize, unless orig is PNG/GIF, higher quality for smaller thumbnails:
 			$img->resize($width, $height)->save($thumbPath, min(98, max(self::$thumb_jpeg_quality, self::$thumb_jpeg_quality + 0.15 * (250 - min($width, $height)))), TRUE);
 
-			if (ENVIRONMENT == 'development')
+			if (ENVIRONMENT === 'development')
 			{
 				$imginfo = $img->getMetaInfo();
 				$meta->store('img_info', $imginfo);
@@ -3487,8 +3536,9 @@ class FileManager
 		static $regex;
 		if (!$regex){
 			$regex = array(
-				explode(' ', 'Æ æ Œ œ ß Ü ü Ö ö Ä ä À Á Â Ã Ä Å &#260; &#258; Ç &#262; &#268; &#270; &#272; Ð È É Ê Ë &#280; &#282; &#286; Ì Í Î Ï &#304; &#321; &#317; &#313; Ñ &#323; &#327; Ò Ó Ô Õ Ö Ø &#336; &#340; &#344; Š &#346; &#350; &#356; &#354; Ù Ú Û Ü &#366; &#368; Ý Ž &#377; &#379; à á â ã ä å &#261; &#259; ç &#263; &#269; &#271; &#273; è é ê ë &#281; &#283; &#287; ì í î ï &#305; &#322; &#318; &#314; ñ &#324; &#328; ð ò ó ô õ ö ø &#337; &#341; &#345; &#347; š &#351; &#357; &#355; ù ú û ü &#367; &#369; ý ÿ ž &#378; &#380;'),
-				explode(' ', 'Ae ae Oe oe ss Ue ue Oe oe Ae ae A A A A A A A A C C C D D D E E E E E E G I I I I I L L L N N N O O O O O O O R R S S S T T U U U U U U Y Z Z Z a a a a a a a a c c c d d e e e e e e g i i i i i l l l n n n o o o o o o o o r r s s s t t u u u u u u y y z z z'),
+				// Last 4 characters Ъ ъ Ь ь don't have replaces. They should be removed.
+				explode(' ', 'Æ æ Œ œ ß Ü ü Ö ö Ä ä À Á Â Ã Ä Å &#260; &#258; Ç &#262; &#268; &#270; &#272; Ð È É Ê Ë &#280; &#282; &#286; Ì Í Î Ï &#304; &#321; &#317; &#313; Ñ &#323; &#327; Ò Ó Ô Õ Ö Ø &#336; &#340; &#344; Š &#346; &#350; &#356; &#354; Ù Ú Û Ü &#366; &#368; Ý Ž &#377; &#379; à á â ã ä å &#261; &#259; ç &#263; &#269; &#271; &#273; è é ê ë &#281; &#283; &#287; ì í î ï &#305; &#322; &#318; &#314; ñ &#324; &#328; ð ò ó ô õ ö ø &#337; &#341; &#345; &#347; š &#351; &#357; &#355; ù ú û ü &#367; &#369; ý ÿ ž &#378; &#380; А а Б б В в Г г Д д Е е Ё ё Ж ж З з И и Й й К к Л л М м Н н О о П п Р р С с Т т У у Ф ф Х х Ц ц Ч ч Ш ш Щ щ Ы ы Э э Ю ю Я я Ъ ъ Ь ь'),
+				explode(' ', 'Ae ae Oe oe ss Ue ue Oe oe Ae ae A A A A A A A A C C C D D D E E E E E E G I I I I I L L L N N N O O O O O O O R R S S S T T U U U U U U Y Z Z Z a a a a a a a a c c c d d e e e e e e g i i i i i l l l n n n o o o o o o o o r r s s s t t u u u u u u y y z z z A a B b V v G g D d E e E e ZH zh Z z I i J j K k L l M m N n O o P p R r S s T t U u F f H h TS ts CH ch SH sh SCH sch Y y E e YU yu YA ya'),
 			);
 		}
 

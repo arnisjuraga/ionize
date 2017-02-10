@@ -71,6 +71,10 @@
 						<li><a id="mediamanagerlink" href="media/get_media_manager" title="<?php echo lang('ionize_menu_media_manager'); ?>"><?php echo lang('ionize_menu_media_manager'); ?></a></li>
 					<?php endif ;?>
 
+					<?php if(Authority::can('access', 'admin/content/type')) :?>
+						<li class="divider"><a class="jnavlink" data-object="contentTypeManager" data-class="ContentTypeManager" title="<?php echo lang('ionize_menu_contenttypes'); ?>"><?php echo lang('ionize_menu_contenttypes'); ?></a></li>
+					<?php endif ;?>
+
 					<?php if(Authority::can('access', 'admin/article/type')) :?>
 						<li class="divider"><a class="navlink" href="article_type/index" title="<?php echo lang('ionize_menu_types'); ?>"><?php echo lang('ionize_menu_types'); ?></a></li>
 					<?php endif ;?>
@@ -84,7 +88,7 @@
 					<?php endif ;?>
 
 					<?php if(Authority::can('access', 'admin/item')) :?>
-	                    <li><a class="navlink" href="item/index" title="<?php echo lang('ionize_menu_static_items'); ?>"><?php echo lang('ionize_menu_static_items'); ?></a></li>
+						<li><a class="jnavlink" data-object="staticItemManager" data-class="StaticItemManager" title="<?php echo lang('ionize_menu_static_items'); ?>"><?php echo lang('ionize_menu_static_items'); ?></a></li>
 					<?php endif ;?>
 
 				</ul>
@@ -100,7 +104,17 @@
 								&& $module['has_admin']
 							)
 							:?>
-								<li><a class="navlink" id="<?php echo $module['uri']; ?>ModuleLink" href="module/<?php echo $module['uri']; ?>/<?php echo $module['uri']; ?>/index" title="<?php echo $module['name']; ?>"><?php echo $module['name']; ?></a></li>
+								<?php
+
+								// Old way
+								$data = 'data-url="module/' . $module['uri'] .'/' . $module['uri'] . '/index"';
+
+								// New way : JS class (config.php : 'js_main_class' => 'MYCLASS')
+								if (isset($module['js_main_class']))
+									$data = 'data-class="'.$module['js_main_class'].'"';
+								?>
+
+								<li><a class="navlink" <?php echo $data ?> id="<?php echo $module['uri']; ?>ModuleLink" href="module/<?php echo $module['uri']; ?>/<?php echo $module['uri']; ?>/index" title="<?php echo $module['name']; ?>"><?php echo $module['name']; ?></a></li>
 							<?php endif ;?>
 
 						<?php endforeach ;?>
@@ -173,21 +187,79 @@
 	// Init of all main menu links
 	$$('.navlink').each(function(item)
 	{
+		var className = item.getProperty('data-class');
+
+		// New way
+		if (className)
+		{
+			var obj = ION.registry(className);
+
+			if ( ! obj)
+			{
+				eval("var exist = typeOf(" + className + ")");
+				if (exist != 'null') {
+					eval("obj = " + className + ";");
+					ION.register(className, obj);
+				}
+			}
+
+			if (typeOf(obj) != 'null' && typeOf(obj.getMainPanel) == 'function')
+			{
+				item.addEvent('click', function(e)
+				{
+					e.stop();
+					MUI.Windows.closeAll();
+					obj.getMainPanel();
+				});
+			}
+			else
+			{
+				console.log('ERROR in desktop_header.php : ' + className + ' has no getMainPanel() method.');
+			}
+		}
+		else
+		{
+			item.addEvent('click', function(event)
+			{
+				event.preventDefault();
+
+				MUI.Windows.closeAll();
+
+				ION.contentUpdate({
+					element : 'mainPanel',
+					url: this.getProperty('href'),
+					title: this.getProperty('title')
+				});
+			});
+		}
+	});
+
+	// Init of new pure JS menu links
+	$$('.jnavlink').each(function(item)
+	{
 		item.addEvent('click', function(event)
 		{
 			event.preventDefault();
 
-			ION.contentUpdate({
-            	element : 'mainPanel',
-                url: this.getProperty('href'),
-				title: this.getProperty('title')
-			});
+			var o = ION.registry(this.getProperty('data-object'));
+
+			if (o == null)
+			{
+				o = new ION[this.getProperty('data-class')];
+				ION.register(this.getProperty('data-object'), o);
+			}
+
+			if (typeOf(o['getMainPanel']) == 'function')
+				o.getMainPanel();
+			else
+				console.log(this.getProperty('data-class') + ' has no getMainPanel() method');
 		});
 	});
 
-	if ($('mediamanagerlink'))
+	var el_mediamanagerlink = $('mediamanagerlink');
+	if (el_mediamanagerlink)
 	{
-		$('mediamanagerlink').addEvent('click', function(event)
+		el_mediamanagerlink.addEvent('click', function(event)
 		{
 			event.preventDefault();
 

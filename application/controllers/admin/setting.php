@@ -12,13 +12,15 @@
 
 class Setting extends MY_admin
 {
+	/** @var  Config_model */
+	public $config_model;
+
 	/**
-	 * Fields on wich no XSS filtering is done
+	 * Fields on which no XSS filtering is done
 	 * 
 	 * @var array
 	 */
 	protected $no_xss_filter = array('google_analytics');
-
 
 	/**
 	 * Constructor
@@ -139,7 +141,8 @@ class Setting extends MY_admin
         $this->template['smtp_timeout'] =   isset($config['smtp_timeout']) ? $config['smtp_timeout'] : '30';
 		$this->template['charset'] = 		isset($config['charset']) ? $config['charset'] : 'utf-8';
 		$this->template['mailtype'] = 		isset($config['mailtype']) ? $config['mailtype'] : 'text';
-
+		$this->template['newline'] = 		isset($config['newline']) ? $config['newline'] : '\n';
+		$this->template['crlf'] = 			isset($config['crlf']) ? $config['crlf'] : '\n';
 
 		// Thumbs settings
 		$this->template['thumbs'] = $this->settings_model->get_list(array('name like' => 'thumb_%'));
@@ -292,7 +295,6 @@ class Setting extends MY_admin
 			$options = array(
 				CURLOPT_RETURNTRANSFER => TRUE, // return web page
 				CURLOPT_HEADER => FALSE, // don't return headers
-				CURLOPT_FOLLOWLOCATION => TRUE, // follow redirects
 				CURLOPT_ENCODING => "", // handle all encodings
 				CURLOPT_USERAGENT => "ionize", // who am i
 				CURLOPT_AUTOREFERER => TRUE, // set referer on redirect
@@ -303,6 +305,12 @@ class Setting extends MY_admin
 				CURLOPT_SSL_VERIFYPEER => FALSE, //
 				CURLOPT_VERBOSE => 1 //
 			);
+
+			$open_basedir_restriction = ini_get('open_basedir');
+			$safe_mode = ini_get('safe_mode');
+
+			if ( empty($open_basedir_restriction) && ! $safe_mode)
+				$options[CURLOPT_FOLLOWLOCATION] = TRUE;		// follow redirects
  
 			$ch = curl_init(base_url().$page['name']);
 			curl_setopt_array($ch,$options);
@@ -517,6 +525,7 @@ class Setting extends MY_admin
 			'default_admin_lang',
 			'enable_backend_tracker',
 			'backend_ui_style',
+			'backend_font_scale'
 		);
 
 		// Save settings to DB
@@ -906,16 +915,42 @@ class Setting extends MY_admin
 	
 	}
 	
+	/**
+	 * Saves Log Settings
+	 *
+	 */
+	function save_log()
+	{
+		if($this->input->post('log_threshold') != '')
+		{
+			if ($this->config_model->change('config.php', 'log_threshold', $this->input->post('log_threshold')) == FALSE)
+				$this->error(lang('ionize_message_error_writing_ionize_file'));
+		}
+		
+		if($this->input->post('log_nb_lines') != '')
+		{
+			if ($this->config_model->change('ionize.php', 'log_nb_lines', $this->input->post('log_nb_lines')) == FALSE)
+				$this->error(lang('ionize_message_error_writing_ionize_file'));
+		}
+	}
+
+
     // ------------------------------------------------------------------------
 
+
     /**
-     * Saves Compress HTML Output Setting
+     * Saves HTML Output Setting: Default (unaltered) / Compressed / Beautified
      *
      */
-    function save_compress_html_output()
+    function save_html_output()
     {
-        if ($this->config_model->change('ionize.php', 'compress_html_output', $this->input->post('compress_html_output')) == FALSE)
+		$html_output_mode = (int) $_REQUEST['html_output'];	// 0= default, 1= compressed, 2= beautified
+
+        if (	$this->config_model->change('ionize.php', 'compress_html_output', $html_output_mode === 1) == FALSE
+		    ||  $this->config_model->change('ionize.php', 'beautify_html_output', $html_output_mode === 2) == FALSE
+		)
             $this->error(lang('ionize_message_error_writing_ionize_file'));
+
 
         // UI panel to update after saving
         $this->update[] = array(
@@ -1081,6 +1116,9 @@ class Setting extends MY_admin
 
 	function save_admin_url()
 	{
+		$overlay_position = $this->input->post('overlay_position');
+		$this->config_model->change('config.php', 'admin_overlay_position', $overlay_position);
+		
 		$admin_url = $this->input->post('admin_url');
 		
 		if(	$admin_url != "" && preg_match("/^([a-z0-9])+$/i", $admin_url))
@@ -1193,7 +1231,7 @@ class Setting extends MY_admin
 					$val = '"'.$val.'"';
 				else
 				{
-					$val = ($val === TRUE ) ? "true" : "false";
+					$val = ($val === TRUE ) ? 'true' : 'false';
 				}
 				
 				$conf .= "\$db['default']['".$key."'] = ".$val.";\n";        
@@ -1277,7 +1315,8 @@ class Setting extends MY_admin
 			'mailpath'		=> '',
 			'charset'		=> $this->input->post('charset'),
 			'mailtype'		=> $this->input->post('mailtype'),
-            'newline'       => '\r\n'
+            'newline'       => $this->input->post('newline'),
+            'crlf'       	=> $this->input->post('crlf')
 		);
 
 		switch ($protocol)
@@ -1357,7 +1396,7 @@ class Setting extends MY_admin
 
 		/* Lang settings to Settings
 		 */
-		$callback = create_function('$v', 'return ($v["lang"]!="") ? true : false;');
+		$callback = create_function('$v', 'return ($v["lang"]!="");');
 		$lang_settings = array_filter($settings, $callback );
 
 		Settings::set_lang_settings($lang_settings, 'name', 'content');

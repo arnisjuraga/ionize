@@ -12,7 +12,7 @@ ION.ExtendManager = new Class({
 
 	/**
 	 *
-	 * @param options
+	 * @param	{Object}	options
 	 */
 	initialize: function()
 	{
@@ -42,7 +42,13 @@ ION.ExtendManager = new Class({
 		this.w =            null;       // window
 		this.wContainer =   null;       // Items container (in window)
 		this.destination =  null;       // Destination container (ID) : TabSwapper only for the moment
-		this.destinationTitle = null    // Destination container title : Tab title only for the moment
+		this.destinationTitle = null;    // Destination container title : Tab title only for the moment
+
+		this.extend_instances = null;	// Local store for Extends instances
+
+
+		// Data posted by getWindowExtendListContent()
+		this.post = {};
 
 		this.click_timer = null;
 
@@ -59,6 +65,9 @@ ION.ExtendManager = new Class({
 			}
 		);
 
+		// Delete Event, fired by extend/field.php
+		Events.subscribe('/extend/delete', self.onExtendDelete.bind(this));
+
 		return this;
 	},
 
@@ -67,29 +76,78 @@ ION.ExtendManager = new Class({
 	 *
 	 * @param options
 	 */
-	init: function(options)
+	init: function(opt)
 	{
-		this.parent = options.parent;
-		this.context = options.context;
+		var self = this,
+			opt = typeOf(opt) != 'null' ? opt : {};
 
-		this.id_context = options.id_context;
-		this.id_parent = (typeOf(options.id_parent) != 'null')? options.id_parent : null;
-		this.id_field_parent = (typeOf(options.id_field_parent) != 'null')? options.id_field_parent : 0;
+		this.post = null;
+		if (opt.context) this.context = opt.context;
+		if (opt.id_context) this.id_context = opt.id_context;
+		if (opt.parent) this.parent = opt.parent;
+
+		this.parent = typeOf(opt.parent) != 'null' ? opt.parent : null;
+		this.id_parent = typeOf(opt.id_parent) != 'null' ? opt.id_parent : null;
+		if (opt.id_field_parent) this.id_field_parent = (typeOf(opt.id_field_parent) != 'null')? opt.id_field_parent : 0;
 
 		// Destination DOM HTML element (Extend contexts container)
-		this.destination = (typeOf(options.destination) != 'null')? options.destination : null;
-		this.destinationTitle = (typeOf(options.destinationTitle) != 'null')? options.destinationTitle : null;
+		if (opt.destination) this.destination = (typeOf(opt.destination) != 'null')? opt.destination : null;
+		if (opt.destinationTitle) this.destinationTitle = (typeOf(opt.destinationTitle) != 'null')? opt.destinationTitle : null;
+
+		// Data
+		self.post = typeOf(opt.conditions) != 'null' ? opt.conditions : {};
+		self.conditions = typeOf(opt.conditions) != 'null' ? opt.conditions : {};
+		self.display_conditions = typeOf(opt.display_conditions) != 'null' ? opt.display_conditions : {};
+
+		if (opt.onLoad)
+			opt.onLoad(this);
 
 		this.setWindowInfo();
+
+		return this;
 	},
 
+	reset: function()
+	{
+		this.context = null;
+		this.id_context = null;
+		this.parent = null;
+		this.id_parent = null;
+		this.destination = null;
+		this.post = {};
+	},
+
+	/**
+	 * @returns {null|Array}
+	 */
 	getExtendTypes: function()
 	{
 		return this.extendTypes;
 	},
 
 	/**
+	 * Get options for extend field form window (new / edit extend field)
+	 *
+	 * @param	{Function} onSuccess
+	 * @returns {Object}
+	 */
+	getFormWindowOptions: function(onSuccess)
+	{
+		return {
+			width       :620,
+			height      :500,
+			onSuccess   : onSuccess
+		};
+	},
+
+	/**
 	 * Opens New Extend Window
+	 *
+	 * @param {Object} 	{
+	 * 						parent: 'contact',
+	 * 						id_parent: null,
+	 * 						onSuccess: function(json, this){}
+	 * 					}
 	 *
 	 */
 	createExtend: function()
@@ -97,7 +155,7 @@ ION.ExtendManager = new Class({
 		var self = this;
 
 		// options
-		var opt = arguments[0];
+		var opt = typeOf(arguments[0]) != 'null' ? arguments[0] : {};
 
 		// post data
 		var data = {
@@ -105,17 +163,30 @@ ION.ExtendManager = new Class({
 			id_parent : (opt && opt.id_parent) ? opt.id_parent : this.id_parent
 		};
 
-		var options = {
-			width:500,
-			height:400,
-			onSuccess: function(json)
-			{
-				if (json.message_type == 'success')
-					self.getWindowExtendListContent();
-			}
-		};
+		// Context
+		var context = opt.context ? opt.context : this.context,
+			id_context = opt.id_context ? opt.id_context : this.id_context;
 
-		if (typeOf(opt) == 'object') Object.append(options, opt);
+		if (context != null && id_context != null)
+		{
+			Object.append(data, {
+				'context':context,
+				'id_context':id_context
+			});
+		}
+
+		// On Success function
+		var onSuccess = typeOf(opt.onSuccess) == 'function' ?
+						opt.onSuccess :
+						function(json)
+						{
+							if (json.message_type == 'success')
+								self.getWindowExtendListContent();
+						};
+
+		var options = this.getFormWindowOptions(onSuccess);
+
+		Object.append(options, opt);
 
 		ION.formWindow(
 			'extendfield',
@@ -132,7 +203,7 @@ ION.ExtendManager = new Class({
 	 * Extend Definition Edition
 	 * Opens Extend field definition Editor window
 	 *
-	 * @param id
+	 * @param	{String}	id
 	 */
 	editExtend: function(id)
 	{
@@ -142,18 +213,21 @@ ION.ExtendManager = new Class({
 
 		if (this.parent) data['parent'] = this.parent;
 
+		// Add context if set
+		if (this.context) data['context'] = this.context;
+		if (this.id_context) data['id_context'] = this.id_context;
+
 		// options
 		var opt = arguments[1];
 
-		var options = {
-			width:500,
-			height:400,
-			onSuccess: function(json)
+		var options = this.getFormWindowOptions(
+			function(json)
 			{
+				// Alternative to use of Events.publish('/extend/edit/after')
 				if (json.message_type == 'success')
 					self.getWindowExtendListContent();
 			}
-		};
+		);
 
 		if (typeOf(opt) == 'object') Object.append(options, opt);
 
@@ -167,6 +241,47 @@ ION.ExtendManager = new Class({
 		);
 	},
 
+	/**
+	 * @param	{Object}	extend
+	 */
+	delete: function(extend)
+	{
+		var options = typeOf(arguments[1]) != 'null' ? arguments[1] : {};
+
+		ION.confirmation(
+			'wExtendDelete' + extend.id_extend_field,
+			function()
+			{
+				ION.JSON(
+					ION.adminUrl + 'extend_field/delete',
+					{
+						id_extend_field: extend.id_extend_field
+					},
+					{
+						onSuccess: function(json)
+						{
+							if (options.onSuccess)
+								options.onSuccess(json);
+						}
+					}
+				)
+			},
+			Lang.get('ionize_confirm_extend_delete')
+		)
+	},
+
+	/**
+	 * Refreshes the extends list after delete
+	 *
+	 * @param	{String}	id_extend
+	 */
+	onExtendDelete: function(id_extend)
+	{
+		if (this.w != null)
+		{
+			this.getWindowExtendListContent();
+		}
+	},
 
 	/**
 	 * Adds info to the window
@@ -174,7 +289,7 @@ ION.ExtendManager = new Class({
 	 */
 	setWindowInfo: function()
 	{
-		if (this.w != null)
+		if (this.w != null && this.context != null)
 		{
 			this.w.setInfo(String.capitalize(this.context) + ' : ' + this.id_context);
 		}
@@ -182,30 +297,48 @@ ION.ExtendManager = new Class({
 
 
 	/**
-	 * Opens wondow of all items,
-	 * grouped by item definitions
-	 *
-	 * @param options
+	 * Opens window of all items, grouped by item definitions
 	 */
 	openListWindow: function()
 	{
 		if (typeOf(arguments[0]) != 'null') this.init(arguments[0]);
 
+		// Init Window container
 		if (this.w == null)
 		{
 			this.initListWindow();
-
-			// this.setWindowInfo();
 		}
 
 		this.getWindowExtendListContent();
 	},
 
 
+	closeListWindow: function()
+	{
+		// Init Window container
+		if (this.w != null)
+			this.w.close();
+	},
+
+
+	/**
+	 * Get the Extends, but in the defined container rather than in a window
+	 *
+	 * @param container
+	 * @param options		Optional
+	 */
+	getListInContainer: function(container)
+	{
+		if (typeOf(arguments[1]) != 'null') this.init(arguments[1]);
+
+		this.wContainer = container;
+
+		this.getWindowExtendListContent();
+	},
+
 	/**
 	 * Creates the Items List Window
 	 * Main Window
-	 *
 	 */
 	initListWindow: function()
 	{
@@ -263,11 +396,10 @@ ION.ExtendManager = new Class({
 		this.wContainer = new Element('div', {'id':'extends'}).inject(container, 'bottom');
 	},
 
-
 	/**
-	 * Gets the Window Items List
-	 * (Window of extends selection)
+	 * Gets the Window Items List (Window of extends selection)
 	 *
+	 * By context and id_context if exists
 	 */
 	getWindowExtendListContent:function()
 	{
@@ -280,7 +412,22 @@ ION.ExtendManager = new Class({
 				mode: 'json',
 				order_by: 'label ASC'
 			};
+
+			// Filter on Parent, Context and Context ID
 			if (this.parent) data['parent'] = this.parent;
+
+			// Add context and id_context
+			if (this.context && this.id_context)
+			{
+				url = ION.adminUrl + 'extend_field/get_context_list/json';
+				data = Object.append(data, {
+					context: this.context,
+					id_context: this.id_context
+				});
+			}
+
+			if (this.post != null)
+				Object.append(data, this.post);
 
 			// Get definitions, with items linked to them
 			ION.JSON(
@@ -355,7 +502,7 @@ ION.ExtendManager = new Class({
 	 * Build the Extend List
 	 * Displayed in Extend Fields Window
 	 *
-	 * @param arr
+	 * @param	{Array}			arr
 	 * @returns {HTMLElement}
 	 * @private
 	 */
@@ -370,6 +517,9 @@ ION.ExtendManager = new Class({
 				'class': 'list pointer',
 				'data-id': extend.id_extend_field
 			}).inject(ul);
+
+			// Store the extend data
+			li.store('data', extend);
 
 			// Title
 			var title = new Element('a', {
@@ -387,7 +537,8 @@ ION.ExtendManager = new Class({
 				text:extend.type_name
 			}).inject(li);
 
-			// Double click on item
+			// Double click on item : Link To Context
+			/*
 			li.addEvents({
 				'click': function(e)
 				{
@@ -400,7 +551,9 @@ ION.ExtendManager = new Class({
 					self.click_timer = self.relayItemListClick.delay(0, self, [e, this, 2]);
 				}
 			});
+			*/
 
+			/*
 			ION.addDragDrop(
 				li,
 				'#mainPanel_pad.pad', 	                // Droppables class
@@ -409,12 +562,18 @@ ION.ExtendManager = new Class({
 					self.linkToContext(element.getProperty('data-id'));
 				}
 			);
+			*/
+			// Drag'n'drop on '.dropExtend' classes.
+			// Drp method must be linked to the droppable area, which will know what to do.
+			ION.addDragDrop(li,	'.dropExtend');
 		});
 
 		return ul;
 	},
 
-
+	/**
+	 * @param	{String}	id_extend_field
+	 */
 	linkToContext: function(id_extend_field)
 	{
 		var self = this;
@@ -436,7 +595,9 @@ ION.ExtendManager = new Class({
 		);
 	},
 
-
+	/**
+	 * @param	{String}	id_extend_field
+	 */
 	unlinkFromContext: function(id_extend_field)
 	{
 		var self = this;
@@ -457,7 +618,6 @@ ION.ExtendManager = new Class({
 			}
 		);
 	},
-
 
 	/**
 	 * List of Extend Field definitions
@@ -572,48 +732,47 @@ ION.ExtendManager = new Class({
 				container.empty();
 				var _nb_items = 0;
 
-				// UL
-				var ul = new Element('ul', {
-					'class':'list pb15 pl10'
-				}).inject(container);
-
-				// Each Extend
-				Object.each(parent, function(extend)
-				{
-					_nb_items += 1;
-					var id = extend.id_extend_field;
-
-					var li = new Element('li', {
-						'id' : 'i' + id,
-						'class': 'list pointer',
-						'data-id': id,
-						'data-context': self.context,
-						'data-id-context': self.id_context
-					}).inject(ul, 'bottom');
-
-					// Drag'n'Drop
-					//
-					// @todo
-					//
-					new Element('span', {
-						'class': 'icon left drag'
-					}).inject(li);
-
-					// Title
-					var title = new Element('a', {
-						'class': 'left title unselectable',
-						'text': extend.label
-					}).inject(li);
-
-					// Unlink icon
-					var delIcon = new Element('a', {'class':'icon unlink right'}).inject(li);
-					delIcon.addEvent('click', function(){ self.unlinkFromContext(id); });
-
-					// Type
-					var type_name = new Element('span', {
-						'class':'right lite',
-						text:extend.type_name
-					}).inject(li);
+				new ION.List({
+					container: container,
+					items: parent,
+					sortable: true,
+					sort: {
+						handler: '.drag',
+						id_key: 'id_extend_field',
+						url: ION.adminUrl + 'extend_field/save_ordering'
+					},
+					elements:[
+						// Sort
+						{
+							element: 'span',
+							'class': 'icon drag left'
+						},
+						// Title
+						{
+							element: 'span',
+							'class': 'unselectable left',
+							text: 'label'
+						},
+						// Delete
+						{
+							element: 'a',
+							'class': 'icon delete right',
+							onClick: function(item)
+							{
+								console.log(item);
+							}
+						},
+						// Type name
+						{
+							element: 'span',
+							'class': 'right lite',
+							text: 'type_name'
+						}
+					],
+					onItemDraw: function()
+					{
+						_nb_items += 1;
+					}
 				});
 
 				self.setContextNbItemsInfo(name, _nb_items);
@@ -621,16 +780,20 @@ ION.ExtendManager = new Class({
 		});
 	},
 
-
+	/**
+	 * @param json
+	 * @returns {{}}
+	 * @private
+	 */
 	_groupExtendByParents: function(json)
 	{
-		var r = [];
+		var r = {};
 
 		Object.each(json, function(extend)
 		{
 			if ( ! extend.parent) extend.parent = 'global';
 
-			if ( ! r[extend.parent]) r[extend.parent] = [];
+			if ( typeOf(r[extend.parent]) == 'null') r[extend.parent] = [];
 
 			r[extend.parent].push(extend);
 		});
@@ -638,19 +801,18 @@ ION.ExtendManager = new Class({
 		return r;
 	},
 
-
 	/**
-	 * Get one context Extends Fields (instances)
-	 * linked to one context
-	 * and to one parent
+	 * Get one context Extends Fields (instances) linked to one context and to one parent
 	 *
+	 * @param	{Object}	[options]	{ onSuccess: function(extends) }	if 'onSuccess' is set in options, this method will be called.
 	 */
 	getContextInstances: function()
 	{
 		// Only do it if the context is set
 		if (this.context)
 		{
-			var self = this;
+			var self = this,
+				options = typeOf(arguments[0]) != 'null' ? arguments[0] : {};
 
 			ION.JSON(
 				ION.adminUrl + 'extend_field/get_context_instances_list/json',
@@ -663,9 +825,13 @@ ION.ExtendManager = new Class({
 				{
 					onSuccess: function(json)
 					{
-						if(json.length > 0)
+						if (options.onSuccess)
 						{
-							self.buildInstancesList(json);
+							options.onSuccess(json);
+						}
+						else if(json.length > 0)
+						{
+							self.buildInstancesListContainer(json);
 						}
 					}
 				}
@@ -673,15 +839,39 @@ ION.ExtendManager = new Class({
 		}
 	},
 
-
 	/**
+	 * Get Extend field definitions for one parent type.
 	 *
+	 * @param	{Object}	[options]		{ onSuccess: function(extends) }	if 'onSuccess' is set in options, this method will be called.
 	 */
+	getParentDefinitions: function()
+	{
+		var options = typeOf(arguments[0]) != 'null' ? arguments[0] : {};
+
+		if (this.parent)
+		{
+			ION.JSON(
+				ION.adminUrl + 'extend_field/get_parent_list',
+				{
+					parent: this.parent
+				},
+				{
+					onSuccess: function(json)
+					{
+						if(options.onSuccess)
+							options.onSuccess(json);
+					}
+				}
+			);
+		}
+	},
+
 	getParentInstances: function()
 	{
-		if (this.parent && (this.id_parent || this.id_field_parent))
+		if (this.parent)
 		{
-			var self = this;
+			var self = this,
+				options = typeOf(arguments[0]) != 'null' ? arguments[0] : {};
 
 			ION.JSON(
 				ION.adminUrl + 'extend_field/get_instances_list/json',
@@ -693,9 +883,13 @@ ION.ExtendManager = new Class({
 				{
 					onSuccess: function(json)
 					{
-						if(json.length > 0)
+						if (options.onSuccess)
 						{
-							self.buildInstancesList(json);
+							options.onSuccess(json);
+						}
+						else if(json.length > 0)
+						{
+							self.buildInstancesListContainer(json);
 						}
 					}
 				}
@@ -703,70 +897,99 @@ ION.ExtendManager = new Class({
 		}
 	},
 
-
 	/**
-	 * Builds the list of Extend Fields Instances in the context
-	 * of one parent
+	 * Builds the list of Extend Fields Instances in the context of one parent
 	 *
 	 * @param json
-	 *
 	 */
-	buildInstancesList: function(json)
+	buildInstancesListContainer: function(json)
 	{
-		var self = this;
-
 		// We're supposed to have one defined parent
 		var container = this.getContextExtendContainer(this.parent);
 
 		if (container)
+			this.buildInstancesList(json, container);
+	},
+
+	/**
+	 * @param json
+	 * @param container
+	 */
+	buildInstancesList: function(json, container)
+	{
+		var self = this,
+			options = typeOf(arguments[2]) != 'null' ? arguments[2] : {},
+			readOnly = options.readOnly ? options.readOnly : false,
+			help = options.help ? options.help : false;
+
+		var languages = Settings.get('languages');
+		
+		// 1. First pass : Non translated extends
+		var fields = this._getInstances(json, 0);
+
+		Array.each(fields, function(field)
 		{
-			var languages = Settings.get('languages');
+			// DOM Form field (Label + Field container)
+			var formField = new ION.FormField({container: container, label: {text: field.label}}),
+				ffc = formField.getContainer()
+			;
 
-			// 1. First pass : Non translated extends
-			var fields = this._getInstances(json, 0);
-			Array.each(fields, function(field)
+			if (help)
 			{
-				// DOM Form field (Label + Field container)
-				var formField = new ION.FormField({container: container, label: {text: field.label}}),
-					ffc = formField.getContainer()
-				;
-
-				// Add Help : Description as Title
-				if (field.description) formField.getLabel().set('title', field.description);
-
-				// Get the Field (Only the field), and send it to the FormField container
-				self.getExtendField(field, {container: ffc});
-			});
-
-			// 2. Second pass : Translated extends
-			fields = this._getInstances(json, 1);
-			if (fields.length > 0)
-			{
-				// Create Languages Tabs
-				var tabId = this.buildInstancesLangTab(container);
-
-				Array.each(fields, function(field)
-				{
-					Array.each(languages, function(lang)
-					{
-						var formField = new ION.FormField({	label: {text: field.label} }),
-							ffc = formField.getContainer()
-						;
-
-						// Add Help : Description as Title
-						if (field.description) formField.getLabel().set('title', field.description);
-
-						var el = self.getExtendField(field, {container:ffc, lang:lang.lang});
-
-						// Add the
-						if (el != null)	self.addInstanceToLangTab(formField.getDomElement(), tabId, lang.lang);
-					});
-				});
+				formField.label.title =
+					'Extend Field Key: ' + field.name // Add help title: extendfield key
+					+ (field.description
+							? "\nDescription: " + field.description // Add description to help
+							: ""
+					);
 			}
 
-			// Init some magic : Datepickers, Editors, etc.
-			this.initExtendFieldContainer(container);
+			// Get the Field (Only the field), and send it to the FormField container
+			if (readOnly)
+			{
+				formField.getDomElement().addClass('not-editable');
+				self.getReadOnlyExtendField(field, {container: ffc});
+			}
+			else
+				self.getExtendField(field, {container: ffc});
+		});
+
+		// 2. Second pass : Translated extends
+		fields = this._getInstances(json, 1);
+		if (fields.length > 0)
+		{
+			// Create Languages Tabs
+			var tabId = this.buildInstancesLangTab(container);
+
+			Array.each(fields, function(field)
+			{
+				Array.each(languages, function(lang)
+				{
+					var formField = new ION.FormField({	label: {text: field.label} }),
+						ffc = formField.getContainer()
+						;
+
+					// Add Help : Description as Title
+					if (help && field.description)
+						formField.getLabel().set('title', field.description);
+
+					if (readOnly)
+					{
+						formField.getDomElement().addClass('not-editable');
+						var el = self.getReadOnlyExtendField(field, {container: ffc, lang: lang.lang});
+					}
+					else
+					 	var el = self.getExtendField(field, {container:ffc, lang:lang.lang});
+
+					// Add the
+					if (el != null)	self.addInstanceToLangTab(formField.getDomElement(), tabId, lang.lang);
+				});
+			});
 		}
+
+		// Init some magic : Datepickers, Editors, etc.
+		if ( ! readOnly)
+			this.initExtendFieldContainer(container);
 	},
 
 	/**
@@ -783,11 +1006,131 @@ ION.ExtendManager = new Class({
 
 		Array.each(instances, function(extend)
 		{
-			if (extend.translated == translated)
+			// Only returns type which should be displayed
+			if (extend.translated == translated && extend.display == '1')
 				result.push(extend);
 		});
 
 		return result;
+	},
+
+
+	getReadOnlyExtendField: function(extend, options)
+	{
+		var lang = 			options && options.lang ? options.lang : null,
+			content = 		options.lang
+				? extend['lang_data'][lang]['content'] :
+				(
+					extend.content == null ?
+						(options['setDefaultValue'] == true ? extend.default_value : extend.content) :
+						extend.content
+				),
+			input_name = 	options.name
+				?	options.name
+				: 'cf_' + extend.id_extend_field,
+			dom_type =		extend.html_element_type,
+			dom_tag = 		extend.html_element,
+			container =		options.container,
+			cssClass =		typeOf(options['class']) != 'null'
+				? ' ' + options['class']
+				: '',
+			renderAs = 		typeOf(options['renderAs']) != 'null'
+				? options['renderAs']
+				: null,
+			validateClass = typeOf(options['validateClass']) != 'null'
+				? options['validateClass']
+				: null,
+			// Produced field
+			field = null
+		;
+
+		//
+		// Input, Textarea
+		//
+		if (['text','textarea','editor','email','number','tel','date','date-multiple','datetime'].contains(dom_type))
+		{
+			field = new Element('span', {class:'strong', html:content});
+		}
+
+
+		//
+		// Checkbox / Radio / Select
+		//
+		if (['select','select-multiple','checkbox','radio'].contains(dom_type))
+		{
+			if (typeOf(content) == 'null') content = '';
+			content = content.split(',');
+
+			var values = (extend.value).split('\n'),
+				displayed_content = [];
+
+			field = new Element('span', {class:'strong'});
+
+			Array.each(values, function(value)
+			{
+				var val = value.split(':');
+
+				if (typeOf(val[0]) != 'null' && typeOf(val[1]) != 'null')
+				{
+					if (content.contains(val[0]))
+						displayed_content.push(val[1]);
+				}
+			});
+
+			field.set('html', displayed_content.join(", "));
+		}
+
+
+		//
+		// Media
+		//
+		if (dom_type == 'media')
+		{
+			field = this._getExtendFieldMedia(extend, {lang:options.lang});
+		}
+
+
+		//
+		// Color
+		//
+		if (['color','color-multiple'].contains(dom_type))
+		{
+			field = new Element('div');
+
+			content = content.split(',');
+
+			Array.each(content, function(color)
+			{
+				new Element('div', {class:'h20 w80 mr5', style:'background-color:#' + color}).inject(field);
+			});
+		}
+
+		//
+		// Internal Link
+		//
+		if (dom_type == 'link')
+		{
+			field = new Element('div');
+
+			if (this.id_parent)
+			{
+				// ExtendLinkManager
+				var extendLinkManager = new ION.ExtendLinkManager({
+					container: field,
+					id_extend: extend.id_extend_field,
+					parent: extend.parent,
+					id_parent: this.id_parent,
+					lang: lang
+				});
+				extendLinkManager.loadList();
+			}
+		}
+
+
+		if (container && field)
+			field.inject(container);
+
+		return field;
 	},
 
 
@@ -803,29 +1146,45 @@ ION.ExtendManager = new Class({
 	 * 6 => Select,
 	 * 7 => Date & Time,
 	 * 8 => Medias
+	 * 9 => Color
 	 * 100 => Numeric
 	 * ...
 	 *
 	 * @param extend
 	 * @param options	Object
 	 * 					{
-	 *						lang: '', 	// Lang code. Eg. 'fr'. If set, the extend is translated.
-	 *						id: ''		// If set, will replace the auto-defined field ID
-	 *						name: ''	// If set, will replace the auto-defined field name
+	 *						lang: '', 		// Lang code. Eg. 'fr'. If set, the extend is translated.
+	 *						id: ''			// If set, will replace the auto-defined field ID
+	 *						name: ''		// If set, will replace the auto-defined field name,
+	 *						renderAs: ''	// If set, gives the ability to render one date as multiple
 	 *					}
 	 *
 	 */
 	getExtendField: function(extend, options)
 	{
 		var lang = 			options && options.lang ? options.lang : null,
-			content =		options.lang ?
-							extend['lang_data'][lang]['content'] :
-							(extend.content == null ? extend.default_value : extend.content),
-			input_name = 	options.name ?	options.name : 'cf_' + extend.id_extend_field,
+			content = 		options.lang
+								? extend['lang_data'][lang]['content'] :
+								(
+									extend.content == null ?
+										(options['setDefaultValue'] == true ? extend.default_value : extend.content) :
+										extend.content
+								),
+			input_name = 	options.name
+								?	options.name
+								: 'cf_' + extend.id_extend_field,
 			dom_type =		extend.html_element_type,
 			dom_tag = 		extend.html_element,
 			container =		options.container,
-			cssClass =		options.class,
+			cssClass =		typeOf(options['class']) != 'null'
+								? ' ' + options['class']
+								: '',
+			renderAs = 		typeOf(options['renderAs']) != 'null'
+								? options['renderAs']
+								: null,
+			validateClass = typeOf(options['validateClass']) != 'null'
+								? options['validateClass']
+								: null,
 			// Produced field & label
 			field = 		null
 		;
@@ -839,13 +1198,55 @@ ION.ExtendManager = new Class({
 		//
 		if (['text','textarea','editor','email','number','tel'].contains(dom_type))
 		{
-			field = new Element(dom_tag, {
-				type: dom_type,
-				'class': extend.html_element_class,
-				name: input_name,
-				id: input_name,
-				value: content
-			});
+			// Temporary disabling HTML5 type for number, tel, email
+			// @todo: See how to make it compat. with Mootools validator
+			var field_dom_type = dom_type;
+
+			if (['email','number','tel'].contains(dom_type)) field_dom_type="text";
+
+			field = new Element('div', {'class': 'relative'});
+
+			var get_input_field = function(input_name, id, content)
+			{
+				var i = new Element(dom_tag, {
+					type: field_dom_type,
+					'class': extend.html_element_class + cssClass,
+					name: input_name,
+					id: input_name,
+					value: content
+				}).inject(field);
+
+				field.getFormElement = function () {
+					return i
+				};
+
+				// Store extend in HTML Element
+				i.store('extend', extend);
+
+				// Change Event
+				if (options.onChange != null)
+					i.addEvent('keydown', function (event) {
+						if (event.key == 'enter')
+							options.onChange(this, this.value, extend);
+					});
+
+				// Validator
+				if (validateClass != null) i.addClass(validateClass);
+			};
+
+			if ((dom_type == 'number') && (renderAs == 'multiple'))
+			{
+				var id = input_name;
+				input_name += '[]';
+				
+				if (typeOf(content) == 'null') content = '';
+				content = content.split(',');
+				
+				get_input_field(input_name, id+1, content[0]);
+				get_input_field(input_name, id+2, content[1]);
+			}
+			else
+				get_input_field(input_name, input_name, content);
 		}
 
 		//
@@ -855,10 +1256,13 @@ ION.ExtendManager = new Class({
 		{
 			field = new Element('div');
 
+			if (typeOf(content) == 'null') content = '';
 			content = content.split(',');
 
 			var values = 		(extend.value).split('\n'),
-				input_name = 	dom_type == 'checkbox' ? input_name +'[]' : input_name
+				nb_values = 	Object.getLength(values),
+				input_name = 	dom_type == 'checkbox' ? input_name +'[]' : input_name,
+				input_collection = []
 			;
 
 			Array.each(values, function(value, idx)
@@ -871,10 +1275,24 @@ ION.ExtendManager = new Class({
 						type: dom_type,
 						id: input_name + idx,
 						name: input_name,
-						value: val[0]
+						value: val[0],
+						'class': extend.html_element_class + cssClass,
+						'data-nb-values': nb_values
 					}).inject(field);
 
 					if (content.contains(val[0])) input.setProperty('checked', 'checked');
+
+					input_collection.push(input);
+
+					// Store extend in HTML Element
+					input.store('extend', extend);
+
+					// Change Event
+					if (options.onChange != null)
+						input.addEvent('click', function ()
+						{
+							options.onChange(this, this.value, extend);
+						});
 
 					new Element('label', {
 						'for': input_name + idx,
@@ -882,6 +1300,10 @@ ION.ExtendManager = new Class({
 					}).inject(field);
 				}
 			});
+
+			field.getFormElement = function () {
+				return input_collection
+			};
 		}
 
 		//
@@ -889,20 +1311,36 @@ ION.ExtendManager = new Class({
 		//
 		if (['select','select-multiple'].contains(dom_type))
 		{
+			if (typeOf(content) == 'null') content = '';
 			content = content.split(',');
 
 			var values = (extend.value).split('\n');
 
 			field = new Element('select', {
-				'class':'inputtext',
+				'class': extend.html_element_class + cssClass,
 				id: input_name,
 				name: input_name
 			});
 
-			if (dom_type == 'select-multiple') {
+			if (dom_type == 'select-multiple' || options.renderAs == 'select-multiple') {
 				field.setProperty('multiple', 'multiple');
 				field.setProperty('name', input_name + '[]');
 			}
+
+			// Store extend in HTML Element
+			field.store('extend', extend);
+			field.getFormElement = function () {
+				return field;
+			};
+
+			// Change Event
+			if (options.onChange != null)
+				field.addEvent('change', function () {
+					options.onChange(this, this.value, extend);
+				});
+
+			// No value (Please -- Select one -- )
+			new Element('option', {value: '', text: options.noValueLabel}).inject(field);
 
 			Array.each(values, function(value)
 			{
@@ -923,47 +1361,51 @@ ION.ExtendManager = new Class({
 		//
 		// Date
 		//
-		if (['date','date-multiple'].contains(dom_type))
+		if (['date','date-multiple','datetime'].contains(dom_type))
 		{
 			field = new Element('div', {'class': 'relative'});
 
 			var get_date_field = function(input_name, id, content)
 			{
-				var date_container = new Element('div', {'class':'relative mr30 mb5'}).inject(field);
+				var date_container = new Element('div', {'class':'relative mr30 mb5'}).inject(field),
+					date_extend_class = dom_type == 'datetime' ? 'datetime-extend' : 'date-extend';
 
 				new Element(dom_tag, {
-					type: dom_type,
-					'class':'inputtext date ' + cssClass,
+					type: 'text', 							// dom_type, (removed, conflict with calendar)
+					'class': extend.html_element_class + cssClass + ' ' + date_extend_class,
 					name: input_name,
 					id: id,
 					value: content
 				}).inject(date_container);
 
-				new Element('a', {'class': 'icon clearfield date', 'data-id': id}).inject(date_container);
+				new Element('a', {'class': 'icon clearfield ' + dom_type, 'data-id': id}).inject(date_container);
 			};
 
-			// Simple Date
-			if (dom_type == 'date')
-			{
-				get_date_field(input_name, input_name, content);
-			}
 			// Multiple Dates
-			else
+			if ((dom_type == 'date-multiple') || (renderAs == 'multiple'))
 			{
 				var id = input_name;
 				input_name += '[]';
+				
+				if (typeOf(content) == 'null') content = '';
 				content = content.split(',');
+				
 				get_date_field(input_name, id+1, content[0]);
 				get_date_field(input_name, id+2, content[1]);
+			}
+			// Simple Date
+			else
+			{
+				get_date_field(input_name, input_name, content);
 			}
 		}
 
 		//
-		// Medias
+		// Media
 		//
 		if (dom_type == 'media')
 		{
-			field = new Element('div');
+			field = new Element('div', {'class':'clearfix pt4'});
 
 			// Can be linked : The parent exists
 			if (this.id_parent)
@@ -986,10 +1428,53 @@ ION.ExtendManager = new Class({
 			}
 			else
 			{
+				field.addClass('pt4');
+
 				new Element('i', {
 					'class': 'lite',
 					text: Lang.get('ionize_message_please_save_first')
 				}).inject(field)
+			}
+		}
+
+		//
+		// Color
+		//
+		if (['color','color-multiple'].contains(dom_type))
+		{
+			field = new Element('div', {'class': 'relative'});
+
+			var get_color_field = function(input_name, id, content)
+			{
+				var color_container = new Element('div', {'class':'relative mr30 mb5'}).inject(field);
+
+				new Element(dom_tag, {
+					type	: 'text', 		// dom_type,
+					'class'	: extend.html_element_class + cssClass,
+					name	: input_name,
+					id		: id,
+					value	: content
+				}).inject(color_container);
+
+				new Element('a', {'class': 'icon clearfield date', 'data-id': id}).inject(color_container);
+			};
+
+			// Multiple Colors
+			if ((dom_type == 'color-multiple') || (renderAs == 'multiple'))
+			{
+				var id = input_name;
+				input_name += '[]';
+				
+				if (typeOf(content) == 'null') content = '';
+				content = content.split(',');
+				
+				get_color_field(input_name, id+1, content[0]);
+				get_color_field(input_name, id+2, content[1]);
+			}
+			// Simple Color
+			else
+			{
+				get_color_field(input_name, input_name, content);
 			}
 		}
 
@@ -1014,6 +1499,8 @@ ION.ExtendManager = new Class({
 			}
 			else
 			{
+				field.addClass('pt4');
+
 				new Element('i', {
 					'class': 'lite',
 					text: Lang.get('ionize_message_please_save_first')
@@ -1021,23 +1508,97 @@ ION.ExtendManager = new Class({
 			}
 		}
 
-		//
-		// Validation
-		//
-		if (extend.validate)
+		if (dom_type == 'colorpicker')
 		{
-			field.addClass('validate-' + extend.validate);
-			// label.setProperty('title', Locale.get('FormValidator.' + extend.validate));
+			field = new Element('div');
+			var i = new Element(dom_tag, {
+				type: 'text',
+				'class': 'inputtext w100 color {hash:true, pickerBorder:0, pickerFace:20} ' + extend.html_element_class + cssClass,
+				name: input_name,
+				id: input_name,
+				value: content
+			}).inject(field);
 		}
 
 		//
 		// Pattern
+		// Not compatible with Mootools Validator.
+		// @todo : Needs to be checked
 		//
-		if (extend.html_element_pattern) field.setProperty('pattern', extend.html_element_pattern);
+		// if (extend.html_element_pattern) field.setProperty('pattern', extend.html_element_pattern);
 
+		// Inject
 		if (container && field)
 		{
 			field.inject(container);
+
+			//
+			// Validation
+			//
+			if (extend.validate)
+			{
+				var f = field;
+				if ( ! ['input','select','textarea'].contains(f.get('tag')))
+					f = field.getElement(dom_tag);
+
+				f.addClass('validate-' + extend.validate);
+
+				// Add the validator but does not validate : The submit button has to do !
+				var form = f.getParent('form');
+				if (form && ! form.retrieve('validator'))
+				{
+					var validator = new Form.Validator.Inline(form, {
+						errorPrefix: '',
+						showError: function(element) {
+							element.show();
+						}
+					});
+
+					// Name of the validator : Standard ionize !
+					form.store('validator', validator);
+				}
+
+				// label.setProperty('title', Locale.get('FormValidator.' + extend.validate));
+			}
+		}
+
+		return field;
+	},
+
+
+	_getExtendFieldMedia: function(extend)
+	{
+		var options = typeOf(arguments[1]) != 'null' ? arguments[1] : {},
+			field = new Element('div', {'class':'clearfix pt4'}),
+			lang = 	options && options.lang ? options.lang : null;
+
+		// Can be linked : The parent exists
+		if (this.id_parent)
+		{
+			// Extend Media Manager
+			var emOptions = {
+				container: 		field,
+				parent: 		extend.parent,
+				id_parent: 		this.id_parent,
+				id_extend: 		extend.id_extend_field,
+				extend_label: 	extend.label,
+				lang: 			lang
+			};
+
+			// ExtendMediaManager
+			var extendMediaManager = new ION.ExtendMediaManager(emOptions);
+
+			// Load existing media list
+			extendMediaManager.loadList();
+		}
+		else
+		{
+			field.addClass('pt4');
+
+			new Element('i', {
+				'class': 'lite',
+				text: Lang.get('ionize_message_please_save_first')
+			}).inject(field)
 		}
 
 		return field;
@@ -1054,20 +1615,47 @@ ION.ExtendManager = new Class({
 	 */
 	initExtendFieldContainer: function(container)
 	{
-		// Autogrow for potential textareas
+		// Auto-grow for potential textareas
 		ION.initFormAutoGrow(container);
 
 		// TinyMCE
 		var containerId = container.getProperty('id');
+
+		if ( ! containerId)
+		{
+			containerId = 'extendContainer' + ION.generateHash(8);
+			container.setProperty('id', containerId);
+		}
+
 		ION.initTinyEditors(null, '#' + containerId + ' .smallTinyTextarea', 'small', {'height':80});
 
 		// Date & Time
-		ION.initDatepicker(Lang.get('dateformat_backend'));
-		ION.initClearField('#' + containerId);
+		ION.initDatepicker(
+			Lang.get('dateformat_backend'),
+			{
+				selector:'date-extend',
+				context:'extend'
+			}
+		);
+
+		ION.initDatepicker(
+			Lang.get('dateformat_backend'),
+			{
+				selector:'datetime-extend',
+				context:'extend-time',
+				timePicker: true
+			}
+		);
+
+		ION.initClearField(containerId);
+
+		jscolor.bind();
 	},
 
-
-
+	/**
+	 * @param	{Element}	container
+	 * @returns {String}
+	 */
 	buildInstancesLangTab: function(container)
 	{
 		var idLangTab = 'langTab' + this.parent + this.id_parent;
@@ -1105,6 +1693,11 @@ ION.ExtendManager = new Class({
 		return idLangTab;
 	},
 
+	/**
+	 * @param instance
+	 * @param idLangTab
+	 * @param lang_code
+	 */
 	addInstanceToLangTab: function(instance, idLangTab, lang_code)
 	{
 		var idLangTabContent = idLangTab + 'Content';
@@ -1118,18 +1711,14 @@ ION.ExtendManager = new Class({
 		})
 	},
 
-
 	/**
-	 * Analyse the destination and try to find out
-	 * one existing Extend List container
+	 * Analyse the destination and try to find out one existing Extend List container
 	 * Build it if mandatory
-	 *
 	 */
 	getContextExtendContainer: function(parent)
 	{
-		var container = $(this.destination);
-
-		var section = null;
+		var container = $(this.destination),
+			section = null;
 
 		// No container : Stop here
 		if ( ! container) return null;
@@ -1164,6 +1753,23 @@ ION.ExtendManager = new Class({
 					section.setProperty('id', 'tabSwapper' + parent + this.id_parent);
 				}
 			}
+			// Try with new tabs (ION.Tabs)
+			else
+			{
+				var tabsInstance = container.retrieve('tabsInstance');
+
+				if (typeOf(tabsInstance) != 'null')
+				{
+					tabsInstance.addTab({
+						label: title,
+						onLoaded: function(tab, s)
+						{
+							section = s;
+							section.addClass('pt15');
+						}
+					})
+				}
+			}
 		}
 		else
 		{
@@ -1176,7 +1782,7 @@ ION.ExtendManager = new Class({
 	/**
 	 * Returns type from type ID
 	 *
-	 * @param id_type
+	 * @param	{Number}	id_type
 	 * @returns {*}
 	 * @private
 	 */
@@ -1191,14 +1797,15 @@ ION.ExtendManager = new Class({
 				type = item;
 			}
 		});
+
 		return type;
 	},
 
-
 	/**
 	 * Set tab number of items
-	 * @param name
-	 * @param nb_items
+	 *
+	 * @param	{String}	name
+	 * @param	{Number}	nb_items
 	 */
 	setContextNbItemsInfo: function(name, nb_items)
 	{
@@ -1225,13 +1832,12 @@ ION.ExtendManager = new Class({
 	relayItemListClick: function(e, element, clicks)
 	{
 		// IE7 / IE8 event problem
-		if( ! Browser.ie) if (e) e.stop();
+		if( Browser.name!='ie') if (e) e.stop();
 
 		if (clicks === 2)
 		{
 			var id = element.getProperty('data-id');
 			this.linkToContext(id);
 		}
-		else{}
 	}
 });

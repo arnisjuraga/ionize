@@ -44,7 +44,7 @@
 
 		<!--
 			Form has no action because the same page will process the data.
-			POST data are catched by the global Tagmanager and processed by the Tagmanager's library method 'prcoess_data'
+			POST data are catched by the global Tagmanager and processed by the Tagmanager's library method 'process_data'
 			defined in : /themes/your_theme/libraries/Tagmanager/Contact.php
 			as declared in the form config file : /themes/your_theme/config/forms.php
 		-->

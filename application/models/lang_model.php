@@ -255,20 +255,48 @@ class Lang_model extends Base_model
 		$now = date('Y-m-d H:i:s');
 
 		// Copy...
-		$sql = "insert into url (id_entity, type, canonical, active, lang, path, creation_date, path_ids, full_path_ids )
+		$sql = "INSERT INTO url (id_entity, type, canonical, active, lang, path, creation_date, path_ids, full_path_ids )
 				(
-					select id_entity, type, canonical, 1, '".$to."',path,'".$now."',path_ids, full_path_ids from url 
-					where lang = '". $from ."'
-					and active = 1
-					and id_entity not in
+					SELECT id_entity, type, canonical, 1, '".$to."',path,'".$now."',path_ids, full_path_ids from url
+					WHERE lang = '".$from."'
+					AND active = 1
+					AND id_entity NOT IN
 					(
 						SELECT DISTINCT id_entity
 						FROM url
 						WHERE lang = '". $to ."'
-						and active = 1
+						AND active = 1
 					)
 				)";
 		
 		$this->{$this->db_group}->query($sql);
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
+	/**
+	 * Return all content language table names -- Kochin
+	 *
+	 * By convention, all content language tables, except setting, have _lang as postfix
+	 * in their names. This function returns all those table names.
+	 * 
+	 * @return	array		all content language table names
+	 *								
+	 */
+	public function list_lang_tables()
+	{
+		// Retrieve a list of all table names.
+		$all_tables = $this->{$this->db_group}->list_tables();
+		$lang_tables = array();
+
+		// Extract content language table names.
+		if ($all_tables != FALSE)
+		{
+			$lang_tables = preg_grep('/_lang$/', $all_tables);
+		}
+
+		return $lang_tables;
 	}
 }

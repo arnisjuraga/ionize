@@ -37,8 +37,8 @@ class Article_model extends Base_model
 	public $tag_table = 				'tag';
 	public $tag_join_table = 			'article_tag';
 
-	/* Contains table name wich should be used for each filter get.
-	 * Purpose : Avoid Ambiguous SQL quey when 2 fields have the same name.
+	/* Contains table name which should be used for each filter get.
+	 * Purpose : Avoid Ambiguous SQL query when 2 fields have the same name.
 	 * ex : 'title' in category and 
 	 *
 	 */
@@ -67,10 +67,9 @@ class Article_model extends Base_model
 	/**
 	 * Get one article
 	 *
-	 * @param	string		where array
-	 * @param	string		Optional. Lang code
+	 * @param	string		$where
+	 * @param	string		$lang	Optional. Lang code
 	 * @return	array		array
-	 *
 	 */
 	public function get($where, $lang = NULL)
 	{
@@ -89,14 +88,13 @@ class Article_model extends Base_model
 	/**
 	 * Get one article by its ID
 	 *
-	 * @param	int
-	 * @param 	null|string
-	 *
-	 * @return array
+	 * @param	int			$id_article
+	 * @param 	null|string	$lang
+	 * @return	array
 	 */
-	public function get_by_id($id, $lang = NULL)
+	public function get_by_id($id_article, $lang = NULL)
 	{
-		return $this->get(array('article.id_article' => $id), $lang);
+		return $this->get(array('article.id_article' => $id_article), $lang);
 	}
 
 	// ------------------------------------------------------------------------
@@ -109,8 +107,8 @@ class Article_model extends Base_model
 	 * The article date can be the creation date or the publish_on date if exists
 	 *
 	 * @access	public
-	 * @param 	array	An associative array
-	 * @return	array	Array of records
+	 * @param 	array	$where 	An associative array
+	 * @return	array			Array of records
 	 *
 	 */
 	public function get_list($where = array())
@@ -131,9 +129,14 @@ class Article_model extends Base_model
 	}
 
 
+	// ------------------------------------------------------------------------
+
+
 	/**
 	 * Returns all articles with all lang data
 	 *
+	 * @param	array	$where
+	 * @return	array
 	 */
 	public function get_all_lang_list($where = array())
 	{
@@ -146,12 +149,12 @@ class Article_model extends Base_model
 		$this->{$this->db_group}->select('url.canonical, url.path, url.path_ids, url.full_path_ids');
 		$this->{$this->db_group}->join(
 			$this->url_table. ' as url',
-			$this->table.".id_article = url.id_entity AND ".
-			"(".
-				"url.active = 1 AND ".
+			$this->table.'.id_article = url.id_entity AND '.
+			'('.
+				'url.active = 1 AND '.
 				"url.type = 'article' AND ".
-				"url.lang = ". $this->lang_table .".lang".
-			")",
+				'url.lang = '. $this->lang_table .'.lang'.
+			')',
 			'left'
 		);
 
@@ -161,7 +164,7 @@ class Article_model extends Base_model
 		");
 		$this->{$this->db_group}->join(
 			'page_article',
-			$this->table.".id_article = page_article.id_article",
+			$this->table.'.id_article = page_article.id_article',
 			'left'
 		);
 		$this->{$this->db_group}->join(
@@ -171,7 +174,7 @@ class Article_model extends Base_model
 		);
 		$this->{$this->db_group}->join(
 			'page_lang',
-			"page_lang.id_page = page.id_page AND article_lang.lang = page_lang.lang",
+			'page_lang.id_page = page.id_page AND article_lang.lang = page_lang.lang',
 			'left'
 		);
 
@@ -206,17 +209,17 @@ class Article_model extends Base_model
 		$this->{$this->db_group}->join($this->lang_table, $this->lang_table.'.id_'.$this->table.' = ' .$this->table.'.id_'.$this->table, 'inner');
 		$this->{$this->db_group}->join(
 			$this->url_table. ' as url',
-			$this->table.".id_article = url.id_entity AND ".
-			"(".
-			"url.active = 1 AND ".
+			$this->table.'.id_article = url.id_entity AND '.
+			'('.
+			'url.active = 1 AND '.
 			"url.type = 'article' AND ".
-			"url.lang = ". $this->lang_table .".lang".
-			")",
+			'url.lang = '. $this->lang_table .'.lang'.
+			')',
 			'left'
 		);
 		$this->{$this->db_group}->join(
 			'page_article',
-			$this->table.".id_article = page_article.id_article",
+			$this->table.'.id_article = page_article.id_article',
 			'left'
 		);
 		$this->{$this->db_group}->join(
@@ -226,7 +229,7 @@ class Article_model extends Base_model
 		);
 		$this->{$this->db_group}->join(
 			'page_lang',
-			"page_lang.id_page = page.id_page AND article_lang.lang = page_lang.lang",
+			'page_lang.id_page = page.id_page AND article_lang.lang = page_lang.lang',
 			'left'
 		);
 
@@ -243,8 +246,14 @@ class Article_model extends Base_model
 	 * Get article list with lang data
 	 * Used by front-end to get the posts with lang data
 	 *
+	 * @param	array		$where
+	 * @param	string		$lang
+	 * @param	bool|string	$filter		SQL filter
+	 * @param null $extend_filter
+	 * @return	array					Array of articles
+	 *
 	 */
-	public function get_lang_list($where = array(), $lang = NULL, $filter = FALSE)
+	public function get_lang_list($where = array(), $lang = NULL, $filter = FALSE, $extend_filter=NULL)
 	{
 		// Page_Article table
 		$this->{$this->db_group}->select($this->parent_table.'.*', FALSE);
@@ -256,7 +265,7 @@ class Article_model extends Base_model
 		);
 
 		// Page table
-		$this->{$this->db_group}->select('article_list_view, article_view');
+		// $this->{$this->db_group}->select('article_list_view, article_view');
 		$this->{$this->db_group}->join(
 			$this->page_table,
 			$this->page_table.'.id_page = ' .$this->parent_table.'.id_page',
@@ -312,8 +321,20 @@ class Article_model extends Base_model
 			'left'
 		);
 
+		// Category
+		if ( ! empty($where['id_category']))
+		{
+			$this->_add_category_filter_to_query($where['id_category']);
+			unset($where['id_category']);
+		}
+
+		// Extend filters
+		$this->_add_extend_filter_to_query($extend_filter, $where);
+
 		// Base_model->get_lang_list()
-		$articles =  parent::get_lang_list($where, $lang);
+		$articles = parent::get_lang_list($where, $lang);
+
+		// log_message('error', print_r($this->last_query(), TRUE));
 
 		$this->add_categories($articles, $lang);
 
@@ -326,12 +347,124 @@ class Article_model extends Base_model
 	// ------------------------------------------------------------------------
 
 
-	/** 
+	public function get_orphan_articles($lang = NULL)
+	{
+		$data = array();
+		if (is_null($lang)) $lang = Settings::get_lang('default');
+
+		$sql = "
+			select
+				distinct a.*,
+				pa.id_page
+				from article a
+			 left join page_article pa on pa.id_article = a.id_article
+			 left join article_lang al on al.id_article = a.id_article and al.lang='".$lang."'
+			 where pa.id_page is null
+		";
+
+		$query = $this->{$this->db_group}->query($sql);
+
+		if ( $query->num_rows() > 0)
+			$data = $query->result_array();
+
+		return $data;
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
+	/**
+	 * Get referring articles which have $id_article linked to them through the extend field $extend_name
+	 * (Reverse search)
+	 *
+	 * @param $extend_name
+	 * @param $id_article
+	 * @param array $where
+	 * @param null $lang
+	 * @param bool $filter
+	 * @param null $extend_filter
+	 * @return array
+	 */
+	public function get_referring_articles_in_link_extend($extend_name, $id_article, $where=array(), $lang = NULL, $filter = FALSE, $extend_filter=NULL)
+	{
+		$data = array();
+
+		$extend = self::$ci->extend_field_model->get_extend_definition_from_name(trim($extend_name), 'article');
+
+		if ( ! empty($extend))
+		{
+			// join extend_fields efs on efs.id_extend_field = 16 and efs.parent='article' and efs.id_parent = article.id_article
+			$this->{$this->db_group}->join(
+				'extend_fields efs_ref',
+				"efs_ref.id_extend_field = " . $extend['id_extend_field'] .
+				" AND efs_ref.parent = 'article'" .
+				" AND efs_ref.id_parent = article.id_article"
+			);
+
+			// where efs.content REGEXP '(article:(.*).1096)';
+			$this->{$this->db_group}->where("efs_ref.content REGEXP '(article:(.*).".$id_article.")'", '', false);
+
+			$data = $this->get_lang_list($where, $lang, $filter, $extend_filter);
+		}
+
+		return $data;
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
+	public function get_referring_articles_in_content_element_link_extend(
+		$content_element_name, $extend_name, $id_article,
+		$where=array(), $lang = NULL, $filter = FALSE, $extend_filter=NULL
+	)
+	{
+		$data = array();
+
+		self::$ci->load->model('element_definition_model', '', TRUE);
+
+		$element = self::$ci->element_definition_model->get(array('name' => $content_element_name), $lang);
+		$extend = self::$ci->extend_field_model->get_extend_definition_from_name(trim($extend_name), 'element');
+
+		if ( ! empty($element) && ! empty($extend))
+		{
+			// join element e on e.id_parent = article.id_article and e.parent = 'article' and e.id_element_definition=2
+			$this->{$this->db_group}->join(
+				'element',
+				"element.id_parent = article.id_article" .
+				" and element.parent = 'article'" .
+				" and element.id_element_definition=" . $element['id_element_definition']
+			);
+
+			// join extend_fields efs on efs.id_extend_field = 16 and efs.parent='article' and efs.id_parent = article.id_article
+			$this->{$this->db_group}->join(
+				'extend_fields efs_ref',
+				"efs_ref.id_extend_field = " . $extend['id_extend_field'] .
+				" AND efs_ref.parent = 'element'" .
+				" AND efs_ref.id_parent = element.id_element"
+			);
+
+			// where efs.content REGEXP '(article:(.*).1096)';
+			$this->{$this->db_group}->where("efs_ref.content REGEXP '(article:(.*).".$id_article.")'", '', false);
+			$this->{$this->db_group}->where("page_article.main_parent = 1", '', false);
+
+			$data = $this->get_lang_list($where, $lang, $filter, $extend_filter);
+		}
+
+
+		return $data;
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
+	/**
 	 * Get one article parent pages list
 	 *
-	 * @param 	int		Article ID
+	 * @param 	int		$id_article
 	 * @return	array
-	 *
 	 */
 	public function get_pages_list($id_article)
 	{
@@ -369,6 +502,10 @@ class Article_model extends Base_model
 	/**
 	 * Returns article's context data for a given page
 	 *
+	 * @param	int      $id_article
+	 * @param   int 	 $id_page
+	 * @param 	string 	 $lang
+	 * @return  array
 	 */
 	public function get_context($id_article, $id_page, $lang = NULL)
 	{
@@ -404,18 +541,48 @@ class Article_model extends Base_model
 
 
 	/**
+	 * Returns all URLs of the article in the context of one parent page
+	 *
+	 * @param $id_article
+	 * @param $id_page
+	 *
+	 * @return array
+	 */
+	public function get_urls_in_context($id_article, $id_page)
+	{
+		$urls = [];
+
+		$collection = self::$ci->url_model->get_collection('article', $id_article);
+
+		foreach($collection as $entity)
+		{
+			$path = explode('/', $entity['full_path_ids']);
+			$entity_id_page = $path[count($path) -2];
+
+			if ($entity_id_page == $id_page)
+			{
+				$entity['url'] = base_url() . $entity['lang'] . '/' . $entity['path'];
+				$urls[$entity['lang']] = $entity;
+			}
+		}
+
+		return $urls;
+	}
+
+
+
+	// ------------------------------------------------------------------------
+
+
+	/**
 	 * Returns all contexts for one article
 	 *
-	 * @param	Mixed	ID of one article
-	 * @param	String	Lang code.
-	 *
-	 * @return	array		Array of contexts
-	 *
+	 * @param	string|int		$id_article	ID of one article
+	 * @param	String			Lang code.
+	 * @return	array			Array of contexts
 	 */
-	public function get_all_context($id_article = NULL, $id_lang = NULL)
+	public function get_all_context($id_article = NULL, $lang = NULL)
 	{
-		$data = array();
-
 		if ( ! is_null($id_article))
 		{
 			$this->{$this->db_group}->where('id_article', $id_article);
@@ -423,12 +590,7 @@ class Article_model extends Base_model
 
 		$query = $this->{$this->db_group}->get($this->parent_table);
 
-		if($query->num_rows() > 0)
-		{
-			$data = $query->result_array();
-		}
-		
-		return $data;
+		return ($query->num_rows() > 0) ? $query->result_array() : array();
 	}
 	
 	
@@ -438,15 +600,11 @@ class Article_model extends Base_model
 	/**
 	 * Returns the main context for one article
 	 *
-	 * @param	int			Article ID
-	 *
+	 * @param	int			$id_article
 	 * @return	array		Article array, or one empty array if no article is found
-	 *
 	 */
 	public function get_main_context($id_article)
 	{
-		$data = array();
-
 		$where = array(
 			'id_article' => $id_article,
 			'main_parent' => '1'
@@ -456,12 +614,7 @@ class Article_model extends Base_model
 
 		$query = $this->{$this->db_group}->get($this->parent_table);
 
-		if($query->num_rows() > 0)
-		{
-			$data = $query->row_array();
-		}
-
-		return $data;
+		return ($query->num_rows() > 0) ? $query->row_array() : array();
 	}
 	
 	
@@ -471,16 +624,12 @@ class Article_model extends Base_model
 	/**
 	 * Returns all contexts article's lang data as an array of articles.
 	 *
-	 * @param	Mixed		ID of one article / Array of articles IDs
-	 * @param	string		Lang code
-	 *
+	 * @param	Mixed		$id_article		ID of one article / Array of articles IDs
+	 * @param	string		$lang			Lang code
 	 * @return	array		Array of articles
-	 *
 	 */
 	public function get_lang_contexts($id_article, $lang)
 	{
-		$data = array();
-
 		$this->{$this->db_group}->select($this->table.'.*');
 		$this->{$this->db_group}->select($this->lang_table.'.*');
 		$this->{$this->db_group}->select($this->parent_table.'.*');
@@ -499,12 +648,7 @@ class Article_model extends Base_model
 
 		$query = $this->{$this->db_group}->get($this->table);
 
-		if($query->num_rows() > 0)
-		{
-			$data = $query->result_array();
-		}
-		
-		return $data;
+		return ($query->num_rows() > 0) ? $query->result_array() : array();
 	}
 	
 
@@ -515,8 +659,7 @@ class Article_model extends Base_model
 	 * Add lang content to each article in the article list.
 	 * This function is used for backend
 	 *
-	 * @param	Array	by ref. Array of articles
-	 *
+	 * @param	Array	&$articles 		by ref. Array of articles
 	 */
 	public function add_lang_data(&$articles = array())
 	{
@@ -565,9 +708,8 @@ class Article_model extends Base_model
 	 * Add view logical name to the article list.
 	 * This function is used for backend
 	 *
-	 * @param	Array	by ref. Array of articles
-	 * @param	Array	Array of views, as set in /themes/<the_theme>/config/views.php
-	 *
+	 * @param	Array	&$articles 		by ref. Array of articles
+	 * @param	Array	$views			Array of views, as set in /themes/<the_theme>/config/views.php
 	 */
 	public function add_view_name(&$articles = array(), $views)
 	{
@@ -590,9 +732,8 @@ class Article_model extends Base_model
 	/**
 	 * Adds the 'categories' array to each passed article in the $artices array
 	 *
-	 * @param array
-	 * @param null|string
-	 *
+	 * @param array			$articles
+	 * @param null|string	$lang
 	 */
 	public function add_categories(&$articles = array(), $lang = NULL)
 	{
@@ -644,9 +785,7 @@ class Article_model extends Base_model
 
 
 	/**
-	 *
 	 * @param array $articles
-	 *
 	 */
 	public function add_tags(&$articles = array())
 	{
@@ -704,6 +843,8 @@ class Article_model extends Base_model
 	/**
 	 * Saves the article context
 	 *
+	 * @param	array	$context_data
+	 * @return	int
 	 */
 	public function save_context($context_data)
 	{
@@ -727,9 +868,8 @@ class Article_model extends Base_model
 	/**
 	 * Saves the given page as main parent for this article contexts
 	 *
-	 * @param	int		Article ID
-	 * @param	int		Page ID
-	 *
+	 * @param	int		$id_article
+	 * @param	int		$id_page
 	 * @return 	int		Number of inserted / updated elements
 	 *
 	 */
@@ -754,9 +894,8 @@ class Article_model extends Base_model
 	/**
 	 * Saves one article URLs paths
 	 *
-	 * @param	int		Article id
+	 * @param	int		$id_article
 	 * @return	int		Number of inserted / updated Urls
-	 *
 	 */
 	public function save_urls($id_article)
 	{
@@ -808,13 +947,15 @@ class Article_model extends Base_model
 					$path_ids[] = $id_article;
 					$full_path_ids[] = $id_article;
 					
-					$data = array(
+					$entity = array(
+						'type' => 'article',
+						'id_entity' => $id_article,
 						'url' => $url,
 						'path_ids' => implode('/', $path_ids),
 						'full_path_ids' => implode('/', $full_path_ids)
 					);
 					
-					$nb = $CI->url_model->save_url('article', $l['lang'], $id_article, $data);
+					$nb = $CI->url_model->save_url($entity, $l['lang']);
 				}
 			}
 		}		
@@ -829,9 +970,8 @@ class Article_model extends Base_model
 	 * Rebuild all the Url of all / one article
 	 * If no article id is given, rebuilds all the URLs
 	 *
-	 * @param	int		Optional. Article id
+	 * @param	int		[$id_article]		Optional
 	 * @return	int		Number of inserted / updated Urls
-	 *
 	 */
 	public function rebuild_urls($id_article = NULL)
 	{
@@ -861,6 +1001,8 @@ class Article_model extends Base_model
 	/**
 	 * Unlink one article from one page
 	 *
+	 * @param	int		$id_article
+	 * @param	int		$id_page
 	 */
 	public function unlink($id_article, $id_page)
 	{
@@ -883,11 +1025,9 @@ class Article_model extends Base_model
 	/**
 	 * Saves the article
 	 *
-	 * @param 	array	Standard data table
-	 * @param 	array	Lang depending data table
-	 *
+	 * @param 	array	$data		data table
+	 * @param 	array	$lang_data	Lang depending data table
 	 * @return	int		Articles saved ID
-	 *
 	 */
 	public function save($data, $lang_data)
 	{
@@ -912,9 +1052,8 @@ class Article_model extends Base_model
 	/**
 	 * Calls all integrity corrections functions
 	 *
-	 * @param	array		Article array
-	 * @param	array		Article lang data array
-	 *
+	 * @param	array		$article
+	 * @param	array		$article_lang
 	 */
 	public function correct_integrity($article, $article_lang)
 	{
@@ -928,8 +1067,7 @@ class Article_model extends Base_model
 	/**
 	 * Corrects the article's main parent
 	 *
-	 * @param	int
-	 *
+	 * @param	int		$id_article
 	 * @return	int
 	 */
 	public function correct_main_parent($id_article)
@@ -956,7 +1094,7 @@ class Article_model extends Base_model
 
 	public function correct_internal_links($id_article, $id_old_page, $id_page)
 	{
-		$articles = array();
+		// Update content links
 		$old_link_code = '{{article:'.$id_old_page.'.'.$id_article.'}}';
 		$new_link_code = '{{article:'.$id_page.'.'.$id_article.'}}';
 
@@ -981,6 +1119,13 @@ class Article_model extends Base_model
 				$this->{$this->db_group}->update($this->lang_table, array('content'=>$content));
 			}
 		}
+
+		// Update internal links
+		parent::update(
+			array('link_id' => $id_old_page.'.'.$id_article),
+			array('link_id' => $id_page.'.'.$id_article),
+			$this->parent_table
+		);
 	}
 
 
@@ -990,9 +1135,8 @@ class Article_model extends Base_model
 	/**
 	 * Updates all other articles / pages links when saving one article
 	 *
-	 * @param	array		Article array
-	 * @param	array		Article lang data array
-	 *
+	 * @param	array	$article
+	 * @param	array	$article_lang
 	 */
 	public function update_links($article, $article_lang)
 	{
@@ -1012,7 +1156,7 @@ class Article_model extends Base_model
 		);
 		$this->{$this->db_group}->update('page');
 
-		// Update of pages (lang table) wich links to this article
+		// Update of pages (lang table) which links to this article
 		$sql = "update page_lang as pl
 					inner join page as p on p.id_page = pl.id_page
 					inner join article_lang as al on al.id_article = p.link_id
@@ -1059,12 +1203,10 @@ class Article_model extends Base_model
 	 *  - when drag / drop an article to a page
 	 * 	- when saving an article for the first time
 	 *
-	 * @param	int		ID of the page
-	 * @param	int		ID of the article
-	 * @param	Array	Optional. Array of context data to insert to the join table.
-	 *
+	 * @param	int		$id_page
+	 * @param	int		$id_article
+	 * @param	Array	$context_data	Optional. Array of context data to insert to the join table.
 	 * @return	boolean	TRUE is the link was set.
-	 *
 	 */
 	public function link_to_page($id_page, $id_article, $context_data = array())
 	{
@@ -1110,35 +1252,35 @@ class Article_model extends Base_model
 	 * Delete one article
 	 * also delete all joined element from join tables
 	 *
-	 * @param	int 	Article ID
+	 * @param	int 	$id_article
 	 * @return 	int		Affected rows number
 	 */
-	public function delete($id)
+	public function delete($id_article)
 	{
 		$affected_rows = 0;
 		
 		// Check if article exists
-		if( $this->exists(array($this->pk_name => $id)) )
+		if( $this->exists(array($this->pk_name => $id_article)) )
 		{
 			// Article delete
-			$affected_rows += $this->{$this->db_group}->where($this->pk_name, $id)->delete($this->table);
+			$affected_rows += $this->{$this->db_group}->where($this->pk_name, $id_article)->delete($this->table);
 			
 			// Lang
-			$affected_rows += $this->{$this->db_group}->where($this->pk_name, $id)->delete($this->lang_table);
+			$affected_rows += $this->{$this->db_group}->where($this->pk_name, $id_article)->delete($this->lang_table);
 	
 			// Linked medias
-			$affected_rows += $this->{$this->db_group}->where($this->pk_name, $id)->delete($this->table.'_media');
+			$affected_rows += $this->{$this->db_group}->where($this->pk_name, $id_article)->delete($this->table.'_media');
 					
 			// Categories
-			$affected_rows += $this->{$this->db_group}->where($this->pk_name, $id)->delete($this->table.'_'.$this->category_table);
+			$affected_rows += $this->{$this->db_group}->where($this->pk_name, $id_article)->delete($this->table.'_'.$this->category_table);
 			
 			// Contexts
-			$affected_rows += $this->{$this->db_group}->where($this->pk_name, $id)->delete($this->parent_table);
+			$affected_rows += $this->{$this->db_group}->where($this->pk_name, $id_article)->delete($this->parent_table);
 			
 			// URLs
 			$where = array(
 				'type' => 'article',
-				'id_entity' => $id
+				'id_entity' => $id_article
 			);
 			$affected_rows += $this->{$this->db_group}->where($where)->delete('url');
 		}
@@ -1158,12 +1300,10 @@ class Article_model extends Base_model
 	 * - the linked media
 	 * - the extended fields values, if any
 	 *
-	 * @param		Integer		ID of the article to duplicate
-	 * @param		Array		Array of new fields (id_page, name, order, etc...)
-	 * @param		String		Article Order in the defined page. Can be "first" or "last"
-	 *
-	 * @return		Integer		ID of the new article
-	 *
+	 * @param	Integer		$id_source	ID of the article to duplicate
+	 * @param	Array		$data		Array of new fields (id_page, name, order, etc...)
+	 * @param	String		$order 		Article Order in the defined page. Can be "first" or "last"
+	 * @return	Integer		ID of the new article
 	 */
 	public function duplicate($id_source, $data, $order)
 	{
@@ -1314,10 +1454,9 @@ class Article_model extends Base_model
 	/**
 	 * Updates articles ordering for the given page ID
 	 * 
-	 * @param	Integer		ID of the parent page
-	 * @param	Integer		Ordering value from wich start the reordering
+	 * @param	Integer		$id_page	ID of the parent page
+	 * @param	Integer		$from 		Ordering value from which start the reordering
 	 * @return 	void
-	 *
 	 */
 	public function shift_article_ordering($id_page, $from = NULL)
 	{
@@ -1338,9 +1477,8 @@ class Article_model extends Base_model
 	/**
 	 * Returns the article ordering array from a givven page
 	 *
-	 * @param	Integer		ID of the page
+	 * @param	Integer		$id_page
 	 * @return	Array		Array of articles ID
-	 *
 	 */
 	public function get_articles_ordering($id_page)
 	{
@@ -1366,13 +1504,12 @@ class Article_model extends Base_model
 	/**
 	 * Set an article online / offline in a given context (page)
 	 *
-	 * @param	int			Page ID
-	 * @param	int			Article ID
-	 *
+	 * @param	int			$id_page
+	 * @param	int			$id_article
+	 * @param	boolean		$new_status
 	 * @return 	boolean		New status
-	 *
 	 */
-	public function switch_online($id_page, $id_article)
+	public function switch_online($id_page, $id_article, $new_status=NULL)
 	{
 		// Current status
 		$article = $this->get_context($id_article, $id_page);
@@ -1380,7 +1517,7 @@ class Article_model extends Base_model
 		$status = $article['online'];
 	
 		// New status
-		($status == 1) ? $status = 0 : $status = 1;
+		$status = $new_status != NULL ? $new_status : ($status == 1 ? $status = 0 : $status = 1);
 
 		// Save		
 		$this->{$this->db_group}->where($this->pk_name, $id_article);
@@ -1398,8 +1535,8 @@ class Article_model extends Base_model
 	/**
 	 * Adds the pagination filter to the articles get_lang_list() call
 	 *
-	 * @param int
-	 * @param int
+	 * @param	int	$pagination
+	 * @param	int	$start_index
 	 */
 	public function add_pagination_filter($pagination, $start_index)
 	{
@@ -1414,8 +1551,8 @@ class Article_model extends Base_model
 	/**
 	 * Adds the archives filter to the articles get_lang_list() call
 	 *
-	 * @param int
-	 * @param int
+	 * @param   int     $year
+	 * @param   int     $month
 	 */
 	public function add_archives_filter($year, $month = NULL)
 	{
@@ -1436,7 +1573,7 @@ class Article_model extends Base_model
 		else if ( ! is_null($month))
 		{
 			// Compatibility with 'MONTH' SQL function : month < 10 without firts '0'
-			$period = $year.intval($month);
+			$period = $year. (int) $month;
 			$this->{$this->db_group}->where(
 				'(
 					IF (
@@ -1472,8 +1609,8 @@ class Article_model extends Base_model
 	/**
 	 * Adds the category filter to the articles get_lang_list() call
 	 *
-	 * @param int
-	 * @param int
+	 * @param   int     $category
+	 * @param   int     $lang
 	 */
 	public function add_category_filter($category, $lang)
 	{
@@ -1492,8 +1629,7 @@ class Article_model extends Base_model
 	/**
 	 * Adds the tag filter to the articles get_lang_list() call
 	 *
-	 * @param int
-	 * @param int
+	 * @param   string  $tag_name
 	 */
 	public function add_tag_filter($tag_name)
 	{
@@ -1510,14 +1646,12 @@ class Article_model extends Base_model
 	/**
 	 * Gets the list of archives with number of articles linked to.
 	 *
-	 * @param array  $where
-	 * @param null   $lang
-	 * @param bool   $filter
-	 * @param bool   $month
-	 * @param string $order_by
-	 *
-	 * @return array
-	 *
+	 * @param	array  		$where
+	 * @param	string		$lang
+	 * @param	bool   		$filter
+	 * @param	bool   		$month
+	 * @param	string 		$order_by
+	 * @return	array
 	 */
 	public function get_archives_list($where=array(), $lang=NULL, $filter=FALSE, $month=FALSE, $order_by='period DESC')
 	{
@@ -1605,10 +1739,9 @@ class Article_model extends Base_model
 	/**
 	 * Returns the adjacent article.
 	 *
-	 * @param array
-	 * @param string	'previous' or 'next'
-	 *
-	 * @return null|array
+	 * @param   array       $current
+	 * @param   string	    $adjacent   'previous' or 'next'
+	 * @return  null|array
 	 */
 	public function get_adjacent_article($current, $adjacent)
 	{
@@ -1644,10 +1777,9 @@ class Article_model extends Base_model
 	/**
 	 * Count the number of articles, based on given conditions
 	 *
-	 * @param array
-	 * @param null $lang
-	 * @param null|string	SQL filter
-	 *
+	 * @param array			$where
+	 * @param null 			$lang
+	 * @param null|string	$filter		SQL filter
 	 * @return mixed
 	 */
 	public function count_articles($where=array(), $lang=NULL, $filter=NULL)
@@ -1685,12 +1817,149 @@ class Article_model extends Base_model
 	// ------------------------------------------------------------------------
 
 
+	public function init_article_urls($article, $lang=NULL)
+	{
+		$articles = $this->init_articles_urls(array($article), $lang);
+
+		return $articles[0];
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
+	public function init_articles_urls($articles, $lang=NULL)
+	{
+		self::$ci->load->model('page_model');
+
+		$lang = is_null($lang) ? Settings::get_lang('current') : $lang;
+
+		// Page URL key to use
+		$page_url_key = (config_item('url_mode') === 'short') ? 'url' : 'path';
+
+
+		// Array of all articles IDs
+		$articles_id = array();
+		foreach($articles as $article)
+			$articles_id[] = $article['id_article'];
+
+		// Articles contexts of all articles
+		$pages_context = self::$ci->page_model->get_lang_contexts($articles_id, $lang);
+
+		// Add pages contexts data to articles
+		foreach($articles as &$article)
+		{
+			$contexts = array();
+			foreach($pages_context as $context)
+			{
+				if ($context['id_article'] == $article['id_article'])
+					$contexts[] = $context;
+			}
+
+			$page = array_shift($contexts);
+
+			// Get the context of the Main Parent
+			if ( ! empty($contexts))
+			{
+				foreach($contexts as $context)
+				{
+					if ($context['main_parent'] == '1')
+						$page = $context;
+				}
+			}
+
+			// Basic article URL : its lang URL (without "http://")
+			$url = $article['url'];
+
+			// Link ?
+			if ($article['link_type'] != '' )
+			{
+				// External
+				if ($article['link_type'] === 'external')
+				{
+					$article['absolute_url'] = $article['link'];
+				}
+
+				// Email
+				else if ($article['link_type'] === 'email')
+				{
+					$article['absolute_url'] = auto_link($article['link'], 'both', TRUE);
+				}
+
+				// Internal
+				else
+				{
+					// Article
+					if($article['link_type'] === 'article')
+					{
+						// Get the article to which this page links
+						$rel = explode('.', $article['link_id']);
+						$target_article = $this->get_context($rel[1], $rel[0], Settings::get_lang('current'));
+
+						// Of course, only if not empty...
+						if ( ! empty($target_article))
+						{
+							// Get the article's parent page
+							$parent_page = self::$ci->page_model->get_by_id($rel[0], Settings::get_lang('current'));
+
+							if ( ! empty($parent_page))
+								$article['absolute_url'] = $parent_page[$page_url_key] . '/' . $target_article['url'];
+						}
+					}
+					// Page
+					else
+					{
+						$target_page = self::$ci->page_model->get_by_id($article['link_id'], Settings::get_lang('current'));
+
+						// If target page is offline, 'path' is not set
+						if ( isset($target_page[$page_url_key]))
+							$article['absolute_url'] = $target_page[$page_url_key];
+						else
+							$article['absolute_url'] = '#';
+					}
+
+					$article['relative_url'] = $article['absolute_url'];
+					$article['relative_lang_url'] = $article['absolute_url'];
+
+					// Correct the URL : Lang + Base URL
+					if ( count(Settings::get_online_languages()) > 1 OR Settings::get('force_lang_urls') == '1' )
+					{
+						$article['absolute_url'] =  Settings::get_lang('current'). '/' . $article['absolute_url'];
+						$article['relative_lang_url'] = $article['absolute_url'];
+					}
+
+					$article['absolute_url'] = base_url() . $article['absolute_url'];
+				}
+			}
+			// Standard URL
+			else
+			{
+				$article['relative_url'] = $article['relative_lang_url'] = $page[$page_url_key] . '/' . $url;;
+
+				if ( count(Settings::get_online_languages()) > 1 OR Settings::get('force_lang_urls') == '1' )
+				{
+					$article['relative_lang_url'] = Settings::get_lang('current') . '/' . $article['relative_url'];
+					$article['absolute_url'] = base_url() . $article['relative_lang_url'];
+				}
+				else
+				{
+					$article['absolute_url'] = base_url() . $article['relative_url'];
+				}
+			}
+		}
+
+		return $articles;
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
 	/**
 	 * Adds Published filtering on articles get_lang_list() call
 	 *
-	 * @param bool
-	 * @param null
-	 *
+	 * @param   bool    $on
+	 * @param   string  $lang
 	 */
 	protected function filter_on_published($on = TRUE, $lang = NULL)
 	{
@@ -1716,8 +1985,7 @@ class Article_model extends Base_model
 	/**
 	 * Processes the condition array
 	 *
-	 * @param array
-	 *
+	 * @param array     $where
 	 */
 	protected function _process_where($where=array())
 	{
@@ -1737,9 +2005,8 @@ class Article_model extends Base_model
 	/**
 	 * Adds all SQL conditions requested by the filter to the current request
 	 *
-	 * @param	String		Filter
+	 * @param	String		$filter
 	 * @return 	void
-	 *
 	 */
 	private function _set_filter($filter = NULL)
 	{
@@ -1754,10 +2021,8 @@ class Article_model extends Base_model
 	/**
 	 * Set the correct dates to one article and return it
 	 *
-	 * @param array		Article array
-	 *
-	 * @return array
-	 *
+	 * @param   array	$data   Article array
+	 * @return  array
 	 */
 	protected function _set_dates($data)
 	{
@@ -1769,4 +2034,181 @@ class Article_model extends Base_model
 		return $data;
 	}
 
+
+	protected function _add_extend_filter_to_query($filters, &$query_where=array())
+	{
+		$order_by = ! empty($query_where['order_by']) ? trim($query_where['order_by'], " ,") : NULL;
+		$json = json_decode($filters, TRUE);
+
+		if (empty($filters))
+		{
+			return;
+		}
+
+		// JSON filters
+		if ($json != FALSE)
+		{
+			if (isset($json['extends'])) $json = array($json);
+
+			foreach ($json as $idx_filter => $filter)
+			{
+				if ( ! empty($filter['extends']))
+				{
+					$where = str_replace('.gt', '>', $filter['expression']);
+					$where = str_replace('.lt', '<', $where);
+					$where = str_replace('.eq', '=', $where);
+					$where = str_replace('.neq', '!=', $where);
+
+					if (! is_array($filter['extends'])) $filter['extends'] = array($filter['extends']);
+
+					foreach($filter['extends'] as $idx_extend => $extend_name)
+					{
+						$idx = $idx_filter . $idx_extend;
+
+						$extend = self::$ci->extend_field_model->get_extend_definition_from_name(trim($extend_name));
+
+						if ( ! is_null($extend))
+						{
+							$where = str_replace($extend['name'], 'efs_' . $idx . '.content', $where);
+						}
+
+						$this->{$this->db_group}->select('efs_' . $idx . '.content as extend_' . $extend['id_extend_field']);
+
+						$this->{$this->db_group}->join(
+							'extend_fields efs_' . $idx,
+							"efs_" . $idx . ".id_extend_field = " . $extend['id_extend_field'] .
+							" AND efs_" . $idx . ".parent = 'article'" .
+							" AND efs_" . $idx . ".id_parent = article.id_article",
+							'left'
+						);
+
+						// Order by
+						if ( ! is_null($order_by))
+						{
+							$attrs = explode(',', $order_by);
+
+							foreach($attrs as $attr_i => $attr)
+							{
+								if ( ! empty($attr))
+								{
+									$arr = preg_split("/[\s*]/i", trim($attr));
+
+									if (trim(strtolower($arr[0])) === $extend['name'])
+									{
+										$_order = str_replace($arr[0], "efs_" . $idx . ".content", $attr);
+
+										$this->{$this->db_group}->order_by($_order, NULL, FALSE);
+										unset($attrs[$attr_i]);
+									}
+								}
+								else
+									unset($attrs[$attr_i]);
+							}
+
+							$order_by = implode(',', $attrs);
+						}
+
+						if (empty($order_by))
+							unset($query_where['order_by']);
+						else
+							$query_where['order_by'] = $order_by;
+					}
+
+					$this->{$this->db_group}->where($where, '', false);
+				}
+			}
+		}
+		else
+		{
+			// trace('WTF !!! ');
+			// trace($filters);
+
+			$filters = ! is_array($filters) ? explode(';', $filters) : $filters;
+
+			foreach ($filters as $idx => $filter)
+			{
+				$filter = str_replace('.gt', '>', $filter);
+				$filter = str_replace('.lt', '<', $filter);
+				$filter = str_replace('.eq', '=', $filter);
+				$filter = str_replace('.neq', '!=', $filter);
+
+				$matches = array();
+				$test = preg_match("/(.*)([=<>])(.*)/", $filter, $matches);
+
+				if ($test === 1)
+				{
+					$extend = self::$ci->extend_field_model->get_extend_definition_from_name(trim($matches[1]));
+
+					if ( ! is_null($extend))
+					{
+						$where = str_replace(trim($matches[1]), 'efs_' . $idx . '.content', $matches[0]);
+
+						$this->{$this->db_group}->select('efs_' . $idx . '.content as extend_' . $extend['id_extend_field']);
+
+						$this->{$this->db_group}->join(
+							'extend_fields efs_' . $idx,
+							"efs_" . $idx . ".id_extend_field = " . $extend['id_extend_field'] .
+							" AND efs_" . $idx . ".parent = 'article'" .
+							" AND efs_" . $idx . ".id_parent = article.id_article",
+							'left'
+						);
+
+						$this->{$this->db_group}->where($where, '', false);
+
+						// Query Where
+						if ( ! is_null($order_by))
+						{
+							$attrs = explode(',', $order_by);
+
+							foreach($attrs as $attr_i => $attr)
+							{
+								if ( ! empty($attr))
+								{
+									$arr = preg_split("/[\s*]/i", trim($attr));
+
+									if (trim(strtolower($arr[0])) === $extend['name'])
+									{
+										$_order = str_replace($arr[0], "efs_" . $idx . ".content", $attr);
+
+										$this->{$this->db_group}->order_by($_order, NULL, FALSE);
+										unset($attrs[$attr_i]);
+									}
+								}
+								else
+									unset($attrs[$attr_i]);
+							}
+
+							$order_by = implode(',', $attrs);
+						}
+
+						if (empty($order_by))
+							unset($query_where['order_by']);
+						else
+							$query_where['order_by'] = $order_by;
+					}
+					else
+					{
+						unset($query_where['order_by']);
+					}
+				}
+				else
+				{
+					// Savety : Remove order_by
+					unset($query_where['order_by']);
+				}
+			}
+		}
+	}
+
+
+	protected function _add_category_filter_to_query($id_category)
+	{
+		if ( ! empty($id_category))
+		{
+			$this->{$this->db_group}->join(
+				$this->article_category_table,
+				$this->article_category_table . '.id_article = ' . $this->table . '.id_article AND ' . $this->article_category_table . '.id_category =' . $id_category
+			);
+		}
+	}
 }

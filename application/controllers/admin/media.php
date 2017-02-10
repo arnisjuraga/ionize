@@ -17,6 +17,16 @@ class Media extends MY_admin
 	
 	protected static $MP3_ID3 = array('album', 'artist', 'title', 'year');
 
+	/** @var  Media_model */
+	public $media_model;
+
+	/** @var  Extend_field_model */
+	public $extend_field_model;
+
+	/** @var  Medias */
+	public $medias;
+
+
 	/**
 	 * Constructor
 	 *
@@ -97,7 +107,7 @@ class Media extends MY_admin
 				'width' => (Settings::get('picture_max_width') !='') ? Settings::get('picture_max_width') : 2000,
 				'height' => (Settings::get('picture_max_height') !='') ? Settings::get('picture_max_height') : 2000
 			),
-			'maxUploadSize' => intval(substr(ini_get('upload_max_filesize'), 0, -1)) * 1024 * 1024,
+			'maxUploadSize' => ((int)(substr(ini_get('upload_max_filesize'), 0, -1))) * 1024 * 1024,
 			'filter' => $allowed_mimes,
 			'allowed_extensions' => Settings::get_allowed_extensions(),
 		);
@@ -190,27 +200,13 @@ class Media extends MY_admin
 
 		$items = $this->media_model->get_list($parent, $id_parent);
 
-		if (empty($items))
-		{
-			$this->notice(lang('ionize_message_no_medias'));
-		}
-		else
-		{
-			// Basic template vars
-			$this->template['parent'] = $parent;
-			$this->template['id_parent'] = $id_parent;
+		$result = array(
+			'parent' => $parent,
+			'id_parent' => $id_parent,
+			'items' => $items
+		);
 
-			$this->template['file_path'] = Settings::get('files_path').'/';
-			$this->template['thumb_base_url'] = base_url().$this->template['file_path'].'.thumbs/';
-			$this->template['thumb_size'] = (Settings::get('media_thumb_size') != '') ? Settings::get('media_thumb_size') : '120';
-
-			$this->template['items'] = $items;
-
-			$view = $this->load->view('media/list', $this->template, TRUE);
-			$output_data = array('content' => $view);
-
-			$this->success(NULL, $output_data);
-		}
+		$this->xhr_output($result);
 	}
 
 
@@ -799,15 +795,15 @@ class Media extends MY_admin
 	/** 
 	 * Shows one media meta data
 	 *
-	 * @param int		Media ID
-	 * @param string	parent type ('page', 'article')
-	 * @param int		Parent ID (context in which the media is linked)
+	 * @param	int		$id_media	Media ID
+	 * @param	string	$parent		parent type ('page', 'article')
+	 * @param	int		$id_parent	Parent ID (context in which the media is linked)
 	 *
 	 */
-	public function edit($id, $parent=NULL, $id_parent=NULL)
+	public function edit($id_media, $parent=NULL, $id_parent=NULL)
 	{
-		$this->media_model->feed_template($id, $this->template);
-		$this->media_model->feed_lang_template($id, $this->template);
+		$this->media_model->feed_template($id_media, $this->template);
+		$this->media_model->feed_lang_template($id_media, $this->template);
 
 		$this->template['parent'] = $parent;
 		$this->template['id_parent'] = $id_parent;
@@ -824,11 +820,11 @@ class Media extends MY_admin
 		$this->template['thumbs'] = $this->settings_model->get_list(array('name like' => 'thumb_%'));
 
 		// Extend fields
-		$this->template['extend_fields'] = $this->extend_field_model->get_element_extend_fields('media', $id);
+		$this->template['extend_fields'] = $this->extend_field_model->get_element_extend_fields('media', $id_media);
 		
 		// context data
 		if ($parent)
-			$this->template['context_data'] = $this->media_model->get_context_data($id, $parent, $id_parent);
+			$this->template['context_data'] = $this->media_model->get_context_data($id_media, $parent, $id_parent);
 
 		// Modules addons
 		$this->load_modules_addons($this->template);
@@ -944,38 +940,52 @@ class Media extends MY_admin
 	// ------------------------------------------------------------------------
 
 
-	public function get_thumb($id)
+	/**
+	 * @param	int		$id_media
+	 */
+	public function get_thumb($id_media, $size=120)
 	{
 		// Pictures data from database
-		$picture = $id ? $this->media_model->get($id) : FALSE;
+		$picture = $id_media ? $this->media_model->get($id_media) : FALSE;
+
+		$size = is_null($size) ? (Settings::get('media_thumb_size') != '' ? Settings::get('media_thumb_size') : 120) : $size;
 
 		// Path to the picture
 		if ($picture && file_exists($picture_path = DOCPATH.$picture['path']))
 		{
 			$thumb_path = DOCPATH . Settings::get('files_path'). str_replace(Settings::get('files_path').'/', '/.thumbs/', $picture['base_path']);
-			
-			$return_thumb_path = $thumb_path.$picture['file_name'];
+			$extension = pathinfo($picture_path, PATHINFO_EXTENSION);
 
-			// If no thumb, try to create it
-			if ( ! file_exists($thumb_path.$picture['file_name']))
+			if ($extension != 'svg')
 			{
-				$settings = array(
-					'size' => (Settings::get('media_thumb_size') != '') ? Settings::get('media_thumb_size') : 120,
-					'unsharpmask' => false
-				);
-				
-				try
+				$return_thumb_path = $thumb_path.$picture['file_name'];
+
+				// If no thumb, try to create it
+				if ( ! file_exists($thumb_path.$picture['file_name']))
 				{
-					$return_thumb_path = $this->medias->create_thumb(DOCPATH . $picture['path'], $thumb_path.$picture['file_name'], $settings);
-				}
-				catch(Exception $e)
-				{
-					$return_thumb_path = FCPATH.'themes/'.Settings::get('theme_admin').'/styles/'.Settings::get('backend_ui_style').'/images/icon_48_no_folder_rights.png';
+					$settings = array(
+						'size' => $size,
+						'unsharpmask' => false
+					);
+
+					try
+					{
+						$return_thumb_path = $this->medias->create_thumb(DOCPATH . $picture['path'], $thumb_path.$picture['file_name'], $settings);
+					}
+					catch(Exception $e)
+					{
+						$return_thumb_path = FCPATH.'themes/'.Settings::get('theme_admin').'/styles/'.Settings::get('backend_ui_style').'/images/icon_48_no_folder_rights.png';
+					}
 				}
 			}
+			// SVG files
+			else
+			{
+				$return_thumb_path = $picture_path;
+			}
+
 			$mime = get_mime_by_extension($return_thumb_path);
 			$content = read_file($return_thumb_path);
-			
 			self::push_thumb($content, $mime, 0);
 		}
 		// No source file
@@ -997,10 +1007,10 @@ class Media extends MY_admin
         $expires = gmdate("D, d M Y H:i:s", time() + $expire) . " GMT";
         $size = strlen($content);
 
-        header("Content-Type: $mime");
-        header("Expires: $expires");
-        header("Cache-Control: max-age=$expire");
-        header("Content-Length: $size");
+        header("Content-Type: " . $mime);
+        header("Expires: " . $expires);
+        header("Cache-Control: max-age=" . $expire);
+        header("Content-Length: " . $size);
 
         echo $content;
         
@@ -1059,10 +1069,22 @@ class Media extends MY_admin
 		$file_name = substr( strrchr($path, '/') ,1 );
 		$base_path = str_replace($file_name, '', $path);
 
+		// Youtube (reduced URL)
+		if (
+			substr($base_path, 0, 15) == 'https://youtu.be'
+		)
+		{
+			$service = array(
+				'path' => 'https://www.youtube.com/embed/' . $file_name,
+				'provider' => 'youtube'
+			);
+			return $service;
+		}
+		
 		// Youtube
 		if (
 			substr($file_name, 0, 6) == 'watch?'
-			OR substr($base_path,0, 22) == 'http://www.youtube.com'
+			OR substr($base_path,0, 22) == 'https://www.youtube.com'
 		)
 		{
 			$file_name = str_replace('watch?', '', $file_name);
@@ -1078,17 +1100,17 @@ class Media extends MY_admin
 			}
 
 			$service = array(
-				'path' => 'http://www.youtube.com/embed/' . $file_name,
+				'path' => 'https://www.youtube.com/embed/' . $file_name,
 				'provider' => 'youtube'
 			);
 			return $service;
 		}
 
 		// Vimeo
-		if ( in_array($base_path, array('http://vimeo.com/', 'http://player.vimeo.com/video/')))
+		if ( in_array($base_path, array('https://vimeo.com/', 'https://player.vimeo.com/video/')))
 		{
 			$service = array(
-				'path' => 'http://player.vimeo.com/video/' . $file_name,
+				'path' => 'https://player.vimeo.com/video/' . $file_name,
 				'provider' => 'vimeo'
 			);
 			return $service;

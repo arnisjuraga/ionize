@@ -1,4 +1,3 @@
-
 <!-- Main Column -->
 <div id="maincolumn">
 
@@ -27,7 +26,7 @@
 		<form name="ionizeSettingsForm" id="ionizeSettingsForm" method="post">
 
 			<!-- Dashboard -->
-			<div class="tabcontent">
+			<div class="tabcontent p20">
 
 				<!-- Shortcuts Block -->
 				<dl>
@@ -82,7 +81,7 @@
 			</div>
 
 			<!-- Style -->
-			<div class="tabcontent">
+			<div class="tabcontent p20">
 
 				<dl>
 					<dt>
@@ -95,12 +94,40 @@
 							<?php endforeach ;?>
 						</select>
 					</dd>
+
+					<dt>
+						<br />
+						<label for="font_scale_default"><?php echo lang('ionize_label_backend_font_scale'); ?></label>
+					</dt>
+					<dd>
+						<?php
+							$fontScale = (int) Settings::get('backend_font_scale');
+							$fontScaleChecked	= array(
+								0 =>	$fontScale === 0 ? ' checked="checked"' : '',
+								1 =>	$fontScale === 1 ? ' checked="checked"' : '',
+								2 =>	$fontScale === 2 ? ' checked="checked"' : '',
+								3 =>	$fontScale === 3 ? ' checked="checked"' : ''
+							);
+						?>
+						<br />
+						<input type="radio"<?php echo $fontScaleChecked[0]; ?> name="backend_font_scale" id="font_scale_default" value="0"/>
+						<label for="font_scale_default" style="font-size: 11px">Abc</label><br/>
+
+						<input type="radio"<?php echo $fontScaleChecked[1]; ?> name="backend_font_scale" id="font_scale_plus1" value="1"/>
+						<label for="font_scale_plus1" style="font-size: 13px">Abc</label><br/>
+
+						<input type="radio"<?php echo $fontScaleChecked[2]; ?> name="backend_font_scale" id="font_scale_plus2" value="2"/>
+						<label for="font_scale_plus2" style="font-size: 16px">Abc</label><br/>
+
+						<input type="radio"<?php echo $fontScaleChecked[3]; ?> name="backend_font_scale" id="font_scale_plus3" value="3"/>
+						<label for="font_scale_plus3" style="font-size: 21px">Abc</label>
+					</dd>
 				</dl>
 
 			</div>
 
 			<!-- Visual help : help tips and "Connected" label -->
-			<div class="tabcontent">
+			<div class="tabcontent p20">
 
 				<dl>
 					<dt>
@@ -141,7 +168,7 @@
 			</div>
 
 			<!-- Admin panel displayed languages -->
-			<div class="tabcontent">
+			<div class="tabcontent p10">
 
 				<table class="list w280">
 					<thead>
@@ -174,7 +201,7 @@
 			</div>
 
 			<!-- Admin panel date and time -->
-			<div class="tabcontent">
+			<div class="tabcontent p20">
 
 				<dl>
 					<dt><label for="date_format_eu">dd.mm.yyyy</label></dt>
@@ -202,14 +229,35 @@
 	
 	/**
 	 * Panel toolbox
-	 *
 	 */
 	ION.initToolbox('setting_ionize_toolbox');
 
 	/**
 	 * Options Accordion
-	 *
 	 */
-	new TabSwapper({tabsContainer: 'ionizeSettingsTab', sectionsContainer: 'ionizeSettingsTabContent', selectedClass: 'selected', deselectedClass: '', tabs: 'li', clickers: 'li a', sections: 'div.tabcontent', cookieName: 'ionizeSettingsTab' });
+	new TabSwapper({
+		tabsContainer: 'ionizeSettingsTab',
+		sectionsContainer: 'ionizeSettingsTabContent',
+		selectedClass: 'selected',
+		deselectedClass: '',
+		tabs: 'li',
+		clickers: 'li a',
+		sections: 'div.tabcontent',
+		cookieName: 'ionizeSettingsTab'
+	});
+
+	/**
+	 * Font Scaling Options
+	 */
+	$$("#font_scale_default, #font_scale_plus1, #font_scale_plus2, #font_scale_plus3").addEvent('change', function (e) {
+		var elBody = $$('html')[0];
+		for( var size = 1; size < 4; size++) {
+			elBody.removeClass('sizePlus' + size);
+		}
+
+		if( e.target.id !== 'font_scale_default' ) {
+			elBody.addClass('sizePlus' + (e.target.id.replace('font_scale_plus', '')) );
+		}
+	});
 
 </script>

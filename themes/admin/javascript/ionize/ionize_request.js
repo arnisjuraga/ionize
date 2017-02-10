@@ -50,9 +50,8 @@ ION.append({
 	 */
 	initRequestEvent: function(item, url, data, options, mode)
 	{
-		var data = (typeOf(data) == 'null') ? {} : data;
-		
-		var mode = (typeOf(mode) == 'null') ? 'JSON' : mode;
+		data = (typeOf(data) == 'null') ? {} : data;
+		mode = (typeOf(mode) == 'null') ? 'JSON' : mode;
 
 		// Some safety before adding the event.
 		if (typeOf(item) == 'element')
@@ -148,17 +147,13 @@ ION.append({
 	 * 
 	 * @usage : No direct use. Use ION.JSON() instead.
 	 * 
-	 * @param	String		URL to send the form data. With or without the base URL prefix. Will be cleaned.
-	 * @param	Object		Form data to send as POST
-	 * @param	Object		Options
-	 *						'onSuccess' : Function to use as callback on success
-	 *
+	 * @param	{String}	url			URL to send the form data. With or without the base URL prefix. Will be cleaned.
+	 * @param	{Object}	data		Form data to send as POST
+	 * @param	{Object}	options		Options optionally containing 'onSuccess' : Function to use as callback on success
 	 */
 	getJSONRequestOptions: function(url, data, options)
 	{
-		if (!data) {
-			data = '';
-		}
+		if (typeOf(data) == 'null') data = {};
 
 		// Cleans URLs
 		url = ION.cleanUrl(url);
@@ -166,13 +161,14 @@ ION.append({
 		var onRequest = function() {};
 		var onSuccess = function(responseJSON, responseText) {};
 
-		if (typeOf(options) != 'null' && typeOf(options.onRequest) != 'null') { onRequest = options.onRequest; }
-		if (typeOf(options) != 'null' && typeOf(options.onSuccess) != 'null') { onSuccess = options.onSuccess; }
+		if (typeOf(options) != 'object') options = {};
+		if (typeOf(options.onRequest) != 'null') { onRequest = options.onRequest; }
+		if (typeOf(options.onSuccess) != 'null') { onSuccess = options.onSuccess; }
 
-		var opt = Object.merge(
+		Object.append(
 			options,
 			{
-				url: admin_url + url,
+				url: ION.adminUrl + url,
 				method: 'post',
 				loadMethod: 'xhr',
 				data: data,
@@ -184,9 +180,16 @@ ION.append({
 				onFailure: function(xhr)
 				{
 					MUI.hideSpinner();
-
-					// Error notification
-					ION.notification('error', xhr.responseJSON);
+					if(typeOf(xhr.response) != 'null')
+					{
+						var r = JSON.decode(xhr.response);
+						if(typeOf(r) != 'null' && typeOf(r.type) != 'null' && r.type == 'login')
+						{
+							new ION.Login().getInlineLoginWindow(xhr);
+						}
+					}
+					else
+						ION.error(xhr.status + ' ' + xhr.statusText);
 				},
 				onSuccess: function(responseJSON, responseText)
 				{
@@ -212,13 +215,31 @@ ION.append({
 					if (responseJSON && typeOf(responseJSON.message_type) != 'null')
 					{
 						if (responseJSON.message_type != '')
-							ION.notification.delay(50, MUI, new Array(responseJSON.message_type, responseJSON.message));
+							ION.notification.delay(50, MUI, [responseJSON.message_type, responseJSON.message]);
 					}
+				},
+				onCancel: function()
+				{
+					MUI.hideSpinner();
+				},
+				onException: function(headerName, value)
+				{
+					MUI.hideSpinner();
+					ION.error(headerName + ' ' + value);
+				},
+				onTimeout: function()
+				{
+					MUI.hideSpinner();
+				},
+				onError: function(text, error)
+				{
+					MUI.hideSpinner();
+					ION.error(text);
 				}
 			}
 		);
 
-        return opt;
+        return options;
 	},
 
 
@@ -227,12 +248,12 @@ ION.append({
 	 * 
 	 * @usage : No direct use. Use ION.HTML() instead.
 	 * 
-	 * @param	string		URL to send the form data. With or without the base URL prefix. Will be cleaned.
-	 * @param	mixed		Form data
-	 * @param	object		Options
-	 *						'update' : DOM Element ID to update with the result
-	 *						'append' : DOM Element ID to append the result to.
-	 *						'onSuccess' : Function to use as callback after success
+	 * @param	{String}	url		URL to send the form data. With or without the base URL prefix. Will be cleaned.
+	 * @param	{Mixed}		data 	Form data
+	 * @param	{Object}	options Options object, containing:
+	 *								'update' : DOM Element ID to update with the result
+	 *								'append' : DOM Element ID to append the result to.
+	 *								'onSuccess' : Function to use as callback after success
 	 *
 	 */
 	getHTMLRequestOptions: function(url, data, options)
@@ -251,7 +272,7 @@ ION.append({
 		url = ION.cleanUrl(url);
 
 		return {
-			url: admin_url + url, 
+			url: ION.adminUrl + url,
 			method: 'post',
 			loadMethod: 'xhr',
 			update: update,
@@ -264,9 +285,16 @@ ION.append({
 			onFailure: function(xhr) 
 			{
 				MUI.hideSpinner();
-
-				// Error notification
-				ION.notification('error', xhr.responseJSON);
+				if(typeOf(xhr.response) != 'null')
+				{
+					var r = JSON.decode(xhr.response);
+					if(r.type == 'login')
+					{
+						new ION.Login().getInlineLoginWindow(xhr);
+					}
+				}
+				else
+					ION.error(xhr.status + ' ' + xhr.statusText);
 			},
 			onSuccess: function(responseTree, responseElements, responseHTML, responseJavaScript)
 			{
@@ -286,7 +314,7 @@ ION.append({
 	 */
 	execCallbacks: function(args)
 	{
-		var callbacks = new Array();
+		var callbacks = [];
 
 		// More than one callback
 		if (typeOf(args) == 'array') {

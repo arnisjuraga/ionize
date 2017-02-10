@@ -17,6 +17,13 @@
  */
 class Picture extends Base_Controller
 {
+	/** @var  Media_model */
+	public $media_model;
+
+	/**
+	 * Constructor
+	 *
+	 */
 	public function __construct()
 	{
 		parent::__construct();
@@ -57,10 +64,10 @@ class Picture extends Base_Controller
 
 			$thumb_file_path = $this->medias->get_thumb_file_path($picture, $options);
 
-			$refresh = ! empty($options['refresh']) ? TRUE : FALSE;
+			$refresh = ! empty($options['refresh']);
 
 			// If no thumb, try to create it
-			if ( ! file_exists($thumb_file_path) OR $refresh == TRUE)
+			if ( ! file_exists($thumb_file_path) OR $refresh === TRUE)
 			{
 				try
 				{
@@ -109,6 +116,27 @@ class Picture extends Base_Controller
 		die();
 	}
 
+
+	// ------------------------------------------------------------------------
+
+
+	public function get_size($id_media)
+	{
+		$size = 0;
+		$media = $id_media ? $this->media_model->get($id_media) : FALSE;
+
+		if ($media)
+		{
+			$d = @getimagesize(base_url() . $media['path']);
+
+			$size = array(
+				'width' => $d['0'],
+				'height' => $d['1']
+			);
+		}
+
+		$this->xhr_output($size);
+	}
 }
 
 

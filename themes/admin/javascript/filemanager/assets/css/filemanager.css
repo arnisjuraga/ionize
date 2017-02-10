@@ -81,7 +81,6 @@ div.filemanager label,
 div.filemanager h1 {
 	width: auto;
 	margin: 0;
-	font: normal 11px "lucida grande",tahoma,verdana,arial,sans-serif;;
 	text-transform: none;
 	letter-spacing: 0;
 }
@@ -99,13 +98,16 @@ div.filemanager-header {
 	top: -25px;
 	left: 0;
 	width: auto;
-	margin-left:105px;
 	height: 25px;
 	padding: 3px 0;
 	background: transparent;
 	overflow: hidden;
-}
+	margin-left:2px;
 
+}
+div.filemanager-header.macintel {
+	margin-left:55px;
+}
 /* filemanager-menu */
 div.filemanager div.filemanager-menu {
 	height: 32px;
@@ -121,11 +123,11 @@ div.filemanager div.filemanager-menu {
 div.filemanager-menu button {
 	float: left;
 }
-div.filemanager button.filemanager-open {
+div.filemanager a.filemanager-open,
+div.filemanager a.filemanager-open_all {
 	cursor: pointer;
 	float:right;
-	margin-right:15px;
-	padding:4px 8px;
+	margin-right:5px;
 }
 div.loader {
 	width: 16px;
@@ -502,7 +504,7 @@ div.filemanager h1 {
 	height: 30px;
 	line-height: 30px;
 	color: #333;
-	font-size: 16px;
+	font-size: 1.4rem;
 	letter-spacing: 1px;
 	overflow: hidden;
 	white-space: nowrap;
@@ -608,7 +610,7 @@ div.filemanager input.filemanager-dir {
 }
 div.filemanager .filemanager-dir span {
 	float:left;
-	padding:0 2px;
+	padding:0;
 	color:#666;
 }
 div.filemanager span.filemanager-dir a.icon {
@@ -730,7 +732,7 @@ div.filemanager-container .file .file-progress {
 div.filemanager label.filemanager-resize{
 	float: left;
 	margin-left:5px;
-	height: 24px;
+	height: 26px;
 }
 div.filemanager label.filemanager-resize input{
 	float:left;

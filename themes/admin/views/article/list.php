@@ -1,5 +1,3 @@
-
-
 <ul id="articleList<?php echo $id_page; ?>" class="sortable-container">
 
 <?php
@@ -9,18 +7,12 @@
 	$select_views_class = is_null($all_article_types) ? 'w180' : 'w110';
 	$select_types_class = is_null($all_article_views) ? 'w180' : 'w80';
 
-?>
-
-<?php foreach ($articles as $article) :?>
-
-	<?php
+	foreach ($articles as $article)
+	{
 
 	$title = ($article['title'] != '') ? $article['title'] : $article['name'];
-	
 	$rel = $article['id_page'] . '.' . $article['id_article'];
-	
 	$flat_rel = $article['id_page'] . 'x' .  $article['id_article'];
-	
 	$status = (!$article['online_in_page']) ? 'offline' : 'online' ;
 
 	// Content for each existing language
@@ -44,6 +36,8 @@
 		<!-- Drag icon -->
 		<div class="left" style="width: 30%;overflow: hidden;height: 18px;">
 			<span class="icon left drag mr5"></span>
+
+			<input type="checkbox" name="ids[]" value="<?php echo $article['id_article']; ?>" class="mr5" />
 
 			<!-- Title (draggable) -->
 			<a class="article article<?php echo $flat_rel; ?> <?php echo $status ;?>" title="<?php echo lang('ionize_label_edit'); ?> / <?php echo lang('ionize_label_drag_to_page'); ?>" data-id="<?php echo $rel; ?>"><span><span class="flag flag<?php echo $article['type_flag']; ?>"></span><?php echo $title; ?></span></a>
@@ -104,11 +98,23 @@
 		</div>
 	</li>
 
-<?php endforeach ;?>
+<?php } ;?>
 
 </ul>
 
+<div>
+	<select id="selectAction" class="select ml40">
+		<option value=""><?php echo lang('ionize_select_on_checked') ?></option>
+		<option value="unlink"><?php echo lang('ionize_label_unlink') ?></option>
+		<option value="offline"><?php echo lang('ionize_label_set_offline') ?></option>
+		<option value="online"><?php echo lang('ionize_label_set_online') ?></option>
+		<option value="delete"><?php echo lang('ionize_label_delete') ?></option>
+	</select>
+</div>
+
 <script type="text/javascript">
+
+	var id_page = '<?php echo $id_page; ?>';
 
 	// Articles view / type select for articles list
 	$$('#articleList<?php echo $id_page; ?> .type').each(function(item)
@@ -116,7 +122,7 @@
 		var rel = item.getAttribute('data-id').split(".");
 
 		item.addEvents({
-		
+
 			'change': function(e)
 			{
 				this.removeClass('a');
@@ -204,5 +210,100 @@
 
 	// Article list itemManager
 	articleManager = new ION.ArticleManager({container: 'articleList<?php echo $id_page; ?>', 'id_parent':'<?php echo $id_page; ?>'});
+
+
+	/**
+	 * Processes multiple action on articles
+	 *
+	 * @param	{String}	action
+	 * @param	{Object}	selectObj
+	 */
+	var processMultipleAction = function(action, selectObj)
+	{
+		var cbs = $('articleList'+id_page).getElements('input[name="ids[]"]:checked'),
+			ids = []
+		;
+
+		Object.each(cbs, function(cb)
+		{
+			if (typeOf(cb.value) != 'null')
+				ids.push(cb.value);
+		});
+
+		if (Object.getLength(ids) > 0)
+		{
+			ION.JSON(
+				admin_url + 'article/multiple_action',
+				{
+					id_page: id_page,
+					ids: ids,
+					action: action
+				},
+				{
+					// Receive action & items ID
+					onSuccess: function(json)
+					{
+						switch(json.action)
+						{
+							case 'unlink':
+								(json.ids).each(function(id){
+									ION.unlinkArticleFromPageDOM({id_page:json.id_page, id_article:id});
+								});
+								break;
+
+							case 'online':
+							case 'offline':
+								var status = json.action == 'online' ? 1 : 0;
+								(json.ids).each(function(id){
+									ION.switchOnlineStatus({selector:'.article'+json.id_page+'x'+id, status:status});
+								});
+								break;
+
+							case 'delete':
+								(json.ids).each(function(id){
+									ION.deleteDomElements('.article' + id);
+								});
+								break
+						}
+						// Restore Select position
+						selectObj.set('value', '');
+					}
+				}
+			);
+
+		}
+	};
+
+
+	// Select : Multi-actions
+	var el_selectAction = $('selectAction');
+	el_selectAction.addEvent('change', function()
+	{
+		var action = this.value;
+
+		if (action != '')
+		{
+			if (action == 'delete')
+			{
+				var self = this;
+
+				ION.confirmation(
+					'confDeleteArticles',
+					function(){
+						processMultipleAction(action, self);
+					},
+					Lang.get('ionize_confirm_articles_delete')
+				);
+			}
+			else
+			{
+				processMultipleAction(action, this);
+			}
+		}
+	});
+
+	<?php if (count($articles) == 0):?>
+		el_selectAction.hide();
+	<?php endif; ?>
 
 </script>

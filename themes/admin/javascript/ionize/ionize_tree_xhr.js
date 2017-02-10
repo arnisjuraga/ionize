@@ -34,7 +34,7 @@ ION.TreeXhr = new Class({
 		this.mainpanel = ION.mainpanel;
 		
 		// Array of itemManagers
-		this.itemManagers = {'page': new Array(), 'article': new Array()};
+		this.itemManagers = {'page': [], 'article': []};
 		
 		this.elementIcon_Model = new Element('div', {'class': 'tree-img drag'});
 		this.plusMinus_Model = new Element('div', {'class': 'tree-img plus'});
@@ -45,7 +45,7 @@ ION.TreeXhr = new Class({
 		this.span_Model = new Element('span');
 		this.title_Model = new Element('a', {'class': 'title'});
 		
-		this.opened = new Array();
+		this.opened = [];
 		this.getOpenedFromCookie();
 
 		/*
@@ -205,13 +205,14 @@ ION.TreeXhr = new Class({
 
 			// Action element
 			var action = this.action_Model.clone();
-	        var iconOnline = new Element('a', {'class':'icon status ' + online}).addClass(type + flat_id).setProperty('data-id', rel);
+	        var iconOnline = new Element('a', {'class':'icon status ' + online, title:Lang.get('ionize_button_switch_online')}).addClass(type + flat_id).setProperty('data-id', rel);
 
 			// Title element
 			var link = this.span_Model.clone().addClass('title');
 			var a = this.title_Model.clone()
 						.addClass(online).addClass(type + flat_id).addClass('title')
-						.setProperty('data-id', rel).setProperty('title', rel + ' : ' + title + type_description).setProperty('data-type', type)
+						.setProperty('data-id', rel).setProperty('title', rel + ' : ' + title + type_description)
+						.setProperty('data-type', type)
 						.set('text', String.htmlspecialchars_decode(title));
 			link.adopt(a);
 			li.adopt(action, link);
@@ -242,10 +243,10 @@ ION.TreeXhr = new Class({
 
 				// Icons : Add Article, Add page
 				if (ION.Authority.can('add_article', 'admin/tree/page') && ION.Authority.can('add_article', resource, true))
-					action.adopt(new Element('a').addClass('addArticle').addClass('icon').addClass('article').addClass('add').setProperty('data-id', rel));
+					action.adopt(new Element('a', {title:Lang.get('ionize_label_add_article')}).addClass('addArticle').addClass('icon').addClass('article').addClass('add').setProperty('data-id', rel));
 
 				if (ION.Authority.can('add_page', 'admin/tree/page') && ION.Authority.can('add_page', resource, true))
-					action.adopt(new Element('a').addClass('addPage').addClass('icon').addClass('page').addClass('add').setProperty('data-page', id).setProperty('data-menu', element.id_menu));
+					action.adopt(new Element('a', {title:Lang.get('ionize_button_add_page')}).addClass('addPage').addClass('icon').addClass('page').addClass('add').setProperty('data-page', id).setProperty('data-menu', element.id_menu));
 
 	            // Actions
 				this.addPageActionLinks(action);
@@ -284,7 +285,7 @@ ION.TreeXhr = new Class({
 				// Icon : unlink
 				if (ION.Authority.can('unlink', 'admin/tree/article') && ION.Authority.can('unlink', resource, true))
 				{
-	                var iconUnlink = new Element('a', {'class': 'icon unlink', 'data-id': rel});
+	                var iconUnlink = new Element('a', {'class': 'icon unlink', 'data-id': rel, title:Lang.get('ionize_label_unlink')});
 	                action.adopt(iconUnlink);
 				}
 
@@ -299,7 +300,7 @@ ION.TreeXhr = new Class({
 				var flag = (element.type_flag) ? element.type_flag : '0';
 				if (typeOf(flag) == 'null') flag = 0;
 				var span = new Element('span', {'class':'flag flag' + flag}).inject(a, 'top');
-				if ((flag != '' || flag!='0') && Browser.ie7) a.setStyle('padding-left','6px');
+				if ((flag != '' || flag!='0') && Browser.name=='ie7') a.setStyle('padding-left','6px');
 
 				// Item node line
 				this.treeLine_Model.clone().inject(li, 'top').addClass('line').addClass('node');
@@ -408,7 +409,7 @@ ION.TreeXhr = new Class({
 
 					var span = new Element('span', {'class':'flag flag' + flag}).inject(aTitle, 'top');
 
-					if ((flag != '' || flag != '0') && Browser.ie7) aTitle.setStyle('padding-left','6px');
+					if ((flag != '' || flag != '0') && Browser.name=='ie7') aTitle.setStyle('padding-left','6px');
 
 					// Status
 					item.removeClass('offline').removeClass('online').addClass(status);
@@ -509,8 +510,9 @@ ION.TreeXhr = new Class({
 			ION.listAddToCookie(this.id_container, folder.retrieve('id_page'));
 			this.getOpenedFromCookie();
 
-			$('btnStructureExpand').store('status', 'expand');
-			$('btnStructureExpand').value = Lang.get('ionize_label_collapse_all');
+			var elBtnStructureExpand = $('btnStructureExpand');
+			elBtnStructureExpand.store('status', 'expand');
+			elBtnStructureExpand.value = Lang.get('ionize_label_collapse_all');
 		}
 	},
 
@@ -563,7 +565,7 @@ ION.TreeXhr = new Class({
 	relaySingleOrDoubleClick: function(e, self, el, type, clicks)
 	{
 		// IE7 / IE8 event problem
-		if( ! Browser.ie)
+		if( Browser.name!='ie')
 			if (e) e.stop();
 		
 		// Open page
@@ -574,6 +576,9 @@ ION.TreeXhr = new Class({
 		// Edit Element
 		else
 		{
+			$$('#structurePanel .tree a.selected').removeClass('selected');
+			el.className = el.className + ' selected';
+			
 			var func = function()
 			{
 				ION.splitPanel({
@@ -599,12 +604,9 @@ ION.TreeXhr = new Class({
 		// Parent DOM Element (usually a folder LI)
 		var parentEl = this.id_container + '_page_' + id_parent;
 
-		if (typeOf($(parentEl)) == 'null')
-			parentEl = this.container;
-		else
-			parentEl = $(parentEl);
-
-		return parentEl;
+		return (typeOf($(parentEl)) == 'null')
+			? this.container
+			: $(parentEl);
 	},
 
 	/**
@@ -701,10 +703,9 @@ ION.TreeXhr = new Class({
 	 */
 	getOpenedFromCookie:function()
 	{
-		if (Cookie.read(this.id_container))
-			this.opened = (Cookie.read(this.id_container)).split(',');
-		else
-			this.opened = new Array();
+		this.opened = (Cookie.read(this.id_container))
+			? (Cookie.read(this.id_container)).split(',')
+			: [];
 	},
 
 	getResourceName: function(element, id, type)
@@ -823,7 +824,7 @@ ION.BrowserTreeXhr = new Class({
 			// Flag span : User's flag first, then Type flag
 			var flag = (element.type_flag) ? element.type_flag : '0';
 			var span = new Element('span', {'class':'flag flag' + flag}).inject(a, 'top');
-			if ((flag != '' || flag!='0') && Browser.ie7) a.setStyle('padding-left','6px');
+			if ((flag != '' || flag!='0') && Browser.name=='ie7') a.setStyle('padding-left','6px');
 
 			// Item node line
 			this.treeLine_Model.clone().inject(li, 'top').addClass('line').addClass('node');
@@ -862,7 +863,7 @@ ION.BrowserTreeXhr = new Class({
 	relaySingleOrDoubleClick: function(e, self, el, type, clicks)
 	{
 		// IE7 / IE8 event problem
-		if( ! Browser.ie)
+		if( Browser.name!='ie')
 			if (e) e.stop();
 
 		// Open page
@@ -895,3 +896,327 @@ ION.BrowserTreeXhr = new Class({
 });
 
 
+ION.SimpleDynamicTree = new Class({
+
+	Implements: [Events, Options],
+
+	options: {
+
+		node: {
+			id: 		'id_node',			// Node's ID field
+			id_parent: 	'id_parent',		// Node's parent ID field
+			title:		'title',
+			'class':	'node',
+			icon:		'folder',
+			/*elements: 	[{
+				key: 'title',
+				element: 'a',
+				'class': 'icon edit left'
+			}],*/
+			sortable: false,
+			dragOn: null			// CSS class the li can be dragged on. Should be written '.className'
+			/*
+			onClick: function(item){}
+			*/
+		},
+
+		item: {
+			id: 		'id_item',
+			id_node:	'id_node',		// Item's node ID (parent in the tree)
+			title:		'title',
+			'class':	'item',
+			icon:		'file',
+			/*elements: 	[{
+				key: 'title',
+				element: 'a',
+				'class': 'icon edit left'
+			}],*/
+			sortable: false,
+			dragOn: null			// CSS class the li can be dragged on. Should be written '.className'
+
+			/*
+			 onClick: function(item){}
+			 */
+		},
+
+		url: '',				// URL to get the tree elements
+
+		post: {},				// Posted at each URL request
+
+		loadOnInit: true,
+
+		cookieName: null,
+
+		dragOn: null			// CSS class the li can be dragged on. Should be written '.className'
+	},
+
+	container: null,
+
+	opened: [],
+
+
+	initialize: function(options)
+	{
+		this.setOptions(options);
+
+		this.container = typeOf(options.container) != 'null' ? options.container : null;
+
+		if (this.options.loadOnInit && this.container)
+			this.get({});
+		else if (this.options.loadOnInit)
+			console.log('ION.SimpleDynamicTree() : No container set !');
+
+		if ( this.options.cookieName)
+			if (Cookie.read(this.options.cookieName)) this.opened = (Cookie.read(this.options.cookieName)).split(',');
+
+		return this;
+	},
+
+
+	get: function(node)
+	{
+		var self = this,
+			id_node = typeOf(node[this.options.node.id]) != 'null' ? node[this.options.node.id] : 0;
+
+		// Get children nodes and items
+		new Request.JSON({
+			url: this.options.url,
+			method: 'post',
+			loadMethod: 'xhr',
+			data: node,
+			onSuccess: function(json)
+			{
+				var nodes = json.nodes,
+					elements = json.items,
+					nodesContainer = self._createContainer('node', node, true),
+					itemsContainer = self._createContainer('item', node, true)
+				;
+
+				nodes.each(function(node)
+				{
+					self._createElement(node, 'node', nodesContainer);
+				});
+
+				elements.each(function(item)
+				{
+					self._createElement(item, 'item', itemsContainer);
+				});
+
+				// Stores that the content is loaded
+				nodesContainer.store('loaded', true);
+
+				if (id_node != 0)
+				{
+					var parentContainer = self.container.getElement('li.node' + id_node);
+					self.updateOpenClose(parentContainer);
+				}
+
+			}
+		}).send();
+	},
+
+
+	_createContainer: function(type, node, erase)
+	{
+		var id_node = typeOf(node[this.options.node.id]) != 'null' ? node[this.options.node.id] : 0,
+			id_parent = typeOf(node[this.options.node.id_parent]) != 'null' ? node[this.options.node.id_parent] : 0,
+			container = this.container.getElement('ul.' + type + id_node),
+			parentContainer = this.container.getElement('li.node' + id_node)
+		;
+
+		if (typeOf(parentContainer) == 'null') parentContainer = this.container;
+
+		// Force new container
+		if (erase == true)
+		{
+			if (typeOf(container) != 'null')
+			{
+				container.dispose();
+				container = null;
+			}
+		}
+
+		if (typeOf(container) == 'null')
+		{
+			container = new Element('ul', {'class': 'ul.' + type + id_node, 'data-id': id_node});
+
+			// Root class
+			if (id_node == '0')	container.addClass('tree');
+
+			container.inject(parentContainer, 'bottom');
+
+			// Hide the parentContainer if it should be, but not for the root.
+			if (id_parent != 0)
+				if ( ! (parentContainer.hasClass('f-open'))) { container.setStyle('display', 'none');}
+		}
+
+		return container;
+	},
+
+
+	_createElement: function(item, type, container)
+	{
+		// Inject or get the container
+		var self = this,
+			id = (type == 'node') ?
+				(typeOf(item[this.options.node.id]) != 'null' ? item[this.options.node.id] : 0) :
+				(typeOf(item[this.options.item.id]) != 'null' ? item[this.options.item.id] : 0),
+			/*
+			id_parent = (type == 'node') ?
+				(typeOf(item[this.options.node.id_parent]) != 'null' ? item[this.options.node.id_parent] : 0) :
+				(typeOf(item[this.options.item.id_node]) != 'null' ? item[this.options.item.id_node] : 0),
+			*/
+			ref = (type == 'node') ? this.options.node : this.options.item,
+			title = item[ref['title']]
+		;
+
+		var li = new Element('li', {'data-id': id}).store('loaded', false).store('data', item).addClass(type),
+			icon = new Element('div', {'class': 'tree-img ' + ref.icon}).inject(li),
+			s_title = new Element('span', {class:'title'}).inject(li),
+			a_title = new Element('a', {title: title}).set('text', String.htmlspecialchars_decode(title)).inject(s_title).store('data', item);
+
+		// Click on Title
+		if (typeOf(ref.onClick) == 'function') a_title.addEvent('click', function(){ref.onClick(item)});
+
+		// LI Drag'n'Drop
+		if (self.options.dragOn != null) ION.addDragDrop(li, self.options.dragOn);
+
+		// Item Drag'n'drop
+		if (ref.dragOn != null) ION.addDragDrop(a_title, ref.dragOn);
+
+		if (ref.sortable) icon.addClass('drag');
+
+		// Node
+		if (type == 'node')
+		{
+			li.addClass(type + id);
+
+			// Plus / Minus icon
+			new Element('div', {'class': 'tree-img plus'}).inject(li, 'top').addEvent('click', this.openclose.bind(this));
+		}
+		// Item
+		else
+		{
+			// Item node line
+			new Element('div', {'class': 'tree-img line item'}).inject(li, 'top');
+		}
+
+		li.inject(container, 'bottom');
+
+		// Get the parent : Build tree lines (nodes)
+		li.getParents('li').each(function(){
+			new Element('div', {'class': 'tree-img'}).inject(li, 'top');
+		});
+
+		// Makes the folder sortable (on folder icon)
+		// if (typeOf(container.retrieve('sortables')) != 'null')
+		//	(container.retrieve('sortables')).addItems(li);
+
+		// Open the folder if cookie says...
+		if (this.options.cookieName && type == 'node' && this.opened.contains(id))
+			this.get(item);
+	},
+
+
+	_setSortable: function()
+	{
+		var self = this;
+
+		// Sortable
+		this.sortables = new Sortables(this.ul,
+			{
+				revert: true,
+				handle: this.options.sort.handler,
+				clone: true,
+				constrain: false,
+				opacity: 0.5,
+				onStart:function(el, clone)
+				{
+					clone.addClass('clone');
+				},
+				onComplete: function(item, clone)
+				{
+					// Hides the current sorted element (correct a Mocha bug on hiding modal window)
+					item.removeProperty('style');
+
+					// Get the new order
+					var serialized = this.serialize(0, function(item)
+					{
+						// Check for the not removed clone
+						if ( ! item.hasClass('clone'))
+						{
+							var data = item.retrieve('data');
+							if (self.options.sort.id_key != null && data[self.options.sort.id_key])
+								return data[self.options.sort.id_key];
+							else
+								return item.id;
+						}
+						return;
+					});
+
+					// Items sorting
+					self._sortItems(serialized);
+				}
+			});
+
+		// @todo : Add optional droppable
+
+	},
+
+
+	/**
+	 * Plus / Minus folder icon click event
+	 *
+	 */
+	openclose: function(e)
+	{
+		// if (typeOf(e.stop) == 'function') e.stop();
+		var el = e.target,
+			node = el.getParent('li');
+
+		// Update content : XHR
+		if (node.retrieve('loaded') == false)
+			this.get(node.retrieve('data'));
+		else
+			this.updateOpenClose(node);
+	},
+
+
+	updateOpenClose: function(li)
+	{
+		if(li)
+		{
+			// All childrens UL
+			var nodeContents = li.getChildren('ul'),
+				nodeIcon = li.getChildren('div.' + this.options.node.icon),
+				node = li.retrieve('data'),
+				id = (typeOf(node[this.options.node.id]) != 'null' ? node[this.options.node.id] : 0);
+
+			// Is the folder Open ? Yes ? Close it (Hide the content)
+			if (li.hasClass('f-open'))
+			{
+				var pmIcon = li.getFirst('div.tree-img.minus');
+				pmIcon.addClass('plus').removeClass('minus');
+
+				nodeIcon.removeClass('open');
+				nodeContents.each(function(ul){ ul.setStyle('display', 'none');});
+				li.removeClass('f-open');
+
+				if (this.options.cookieName)
+					ION.listDelFromCookie(this.options.cookieName, id);
+			}
+			else
+			{
+				var pmIcon = li.getFirst('div.tree-img.plus');
+				pmIcon.addClass('minus').removeClass('plus');
+
+				nodeIcon.addClass('open');
+				nodeIcon.each(function(ul){ ul.setStyle('display', 'block'); });
+				li.addClass('f-open');
+
+				if (this.options.cookieName)
+					ION.listAddToCookie(this.options.cookieName, id);
+			}
+		}
+	}
+});

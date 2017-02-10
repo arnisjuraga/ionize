@@ -12,7 +12,18 @@
 
 class Role extends MY_Admin
 {
+	/** @var Role_model  */
 	public $current_role = NULL;
+
+	/** @var  Role_model */
+	public $role_model;
+
+	/** @var  Resource_model */
+	public $resource_model;
+
+	/** @var  User_model */
+	public $user_model;
+
 
 	/**
 	 * Constructor
@@ -116,6 +127,21 @@ class Role extends MY_Admin
 
 	// ------------------------------------------------------------------------
 
+	/**
+	 * List
+	 *
+	 */
+	public function get_list2()
+	{
+		$roles = $this->role_model->get_list();
+		$roles = array_values(array_filter($roles, array($this, '_filter_roles')));
+
+		$this->xhr_output($roles);
+	}
+
+
+	// ------------------------------------------------------------------------
+
 
 	/**
 	 * Save
@@ -171,7 +197,7 @@ class Role extends MY_Admin
 		$id_role = $this->input->post('id_role');
 
 		// Safe : Do not delete Role linked to users
-		$nb_users = $this->user_model->count(array('id_role' => $id_role));
+		$nb_users = $this->user_model->count(array('user.id_role' => $id_role));
 
 		if ($nb_users > 0)
 		{
@@ -212,7 +238,7 @@ class Role extends MY_Admin
 			if ($permission_level)
 			{
 				// Delete all permissions and add 'all' one
-				if ($permission_level == 'all')
+				if ($permission_level === 'all')
 				{
 					$this->rule_model->set_all_permissions($id_role);
 				}
@@ -244,7 +270,7 @@ class Role extends MY_Admin
 	 */
 	public function _filter_roles($row)
 	{
-		return ($row['role_level'] <= $this->current_role['role_level']) ? TRUE : FALSE;
+		return ($row['role_level'] <= $this->current_role['role_level']);
 	}
 
 
@@ -262,7 +288,7 @@ class Role extends MY_Admin
 		{
 			foreach($permissions as $permission)
 			{
-				if ($permission['resource'] == 'all')
+				if ($permission['resource'] === 'all')
 					return TRUE;
 			}
 		}

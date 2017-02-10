@@ -37,12 +37,13 @@ class TagManager_Page extends TagManager
 
 	public static $tag_definitions = array
 	(
-		'pages' => 				'tag_pages',
-		'page' => 				'tag_page',
-		'page:view' => 			'tag_page_view',
-		'page:next' =>			'tag_next_page',
-		'page:prev' =>			'tag_prev_page',
-		'breadcrumb' =>			'tag_breadcrumb',
+		'pages'		=> 	'tag_pages',
+		'page'		=> 	'tag_page',
+		'page:view' => 	'tag_page_view',
+		'page:next' =>	'tag_next_page',
+		'page:prev' =>	'tag_prev_page',
+		'breadcrumb'=>	'tag_breadcrumb',
+		'id_parent' => 	'tag_simple_value'
 	);
 
 
@@ -114,14 +115,13 @@ class TagManager_Page extends TagManager
 			}
 		}
 
-
 		// Can we get one article from the URL ?
 		$entity = self::get_entity();
 		if ( $entity['type'] == 'article')
 		{
 			$article = self::$ci->article_model->get_by_id($entity['id_entity'], Settings::get_lang());
 			$articles = array($article);
-			TagManager_Article::init_articles_urls($articles);
+			$articles = self::$ci->article_model->init_articles_urls($articles);
 			$article = $articles[0];
 		}
 
@@ -203,8 +203,15 @@ class TagManager_Page extends TagManager
 		}
 		if (is_null($page) OR empty($page))
 		{
-			$page = self::get_page_by_code('404');
-			self::set_400_output(404);
+			$page = Event::fire('Page.get.404', $uri);
+
+			if ( ! empty($page) && ! empty($page[0]))
+				$page = $page[0];
+			else
+			{
+				$page = self::get_page_by_code('404');
+				self::set_400_output(404);
+			}
 		}
 		else
 		{
@@ -436,7 +443,7 @@ class TagManager_Page extends TagManager
 	 */
 	public function set_400_output($code = 404)
 	{
-		self::$ci->output->set_header($_SERVER["SERVER_PROTOCOL"]." ".$code." ".self::$http_status_code[$code]);
+		self::$ci->output->set_header($_SERVER['SERVER_PROTOCOL']." $code ".self::$http_status_code[$code]);
 
 		$ext = array_pop(explode('.', array_pop(self::$ci->uri->segment_array())));
 
@@ -653,7 +660,7 @@ class TagManager_Page extends TagManager
 		// Get the asked parent page : From current page or from page ID
 		if (!is_null($parent))
 		{
-			$all_parents = ( $tag->getAttribute('all-parents') == TRUE) ? TRUE : FALSE;
+			$all_parents = ( $tag->getAttribute('all-parents') == TRUE);
 
 			// Path IDs
 			if ($all_parents)
@@ -766,7 +773,12 @@ class TagManager_Page extends TagManager
 			else if(substr($parent, 0, 1) == '-')
 				$parent_page = self::get_relative_parent_page(self::registry('page'), $parent, $display_hidden);
 			else if($parent == 'this')
-				$parent_page = self::registry('page');
+			{
+				if ($tag->get('page'))
+					$parent_page = $tag->get('page');
+				else
+					$parent_page = self::registry('page');
+			}
 			else
 				$parent_page = self::get_page_by_code($parent);
 		}
@@ -973,11 +985,15 @@ class TagManager_Page extends TagManager
 			// Adds the suffix if defined
 			if ( config_item('url_suffix') != '' ) $url .= config_item('url_suffix');
 
-			$return .= $child_tag_open . '<a href="'.$url.'">'.$breadcrumb[$i]['title'].'</a>' ;
-			if ($i<($nb_pages-1))
-				$return .= $separator;
+			if ($i<($nb_pages-1)) {
+				$linkClass = '';
+				$separatorCurrent = $separator;
+			} else {
+				$linkClass = ' class="active"';
+				$separatorCurrent = '';
+			}
 
-			$return .= $child_tag_close;
+			$return .= $child_tag_open . '<a' . $linkClass . ' href="'.$url.'">'.$breadcrumb[$i]['title'].'</a>' . $separatorCurrent . $child_tag_close;
 		}
 
 		// Current Article ?

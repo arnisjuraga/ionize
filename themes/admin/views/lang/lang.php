@@ -1,4 +1,3 @@
-
 <!-- Main Column -->
 <div id="maincolumn">
 
@@ -51,12 +50,12 @@
 							<li id="lang_<?php echo $code; ?>" class="sortme" data-id="<?php echo $code; ?>">
 
 								<!-- Drag icon -->
-								<div class="drag left">
-									<img src="<?php echo admin_style_url(); ?>images/icon_16_ordering.png" />
+								<div class="drag left mt5">
+									<span class="icon ordering"></span>
 								</div>
 
                                 <!-- Delete button -->
-                                <a class="icon right delete" data-id="<?php echo $code; ?>"></a>
+                                <a class="icon right delete mt5" data-id="<?php echo $code; ?>"></a>
 
 								<!-- Lang Code -->
 								<dl class="small">
@@ -107,7 +106,7 @@
 										<label for="def_<?php echo $code; ?>"><?php echo lang('ionize_label_default'); ?></label>
 									</dt>
 									<dd>
-										<input id="def_<?php echo $code; ?>" <?php if (Settings::get_lang('default') == $code ):?>checked="checked"<?php endif;?> type="radio" name="default_lang" class="inputradio" value="<?php echo $code; ?>" />
+										<input onclick="$('online_' + this.value).checked = true" id="def_<?php echo $code; ?>" <?php if (Settings::get_lang('default') == $code ):?>checked="checked"<?php endif;?> type="radio" name="default_lang" class="inputradio" value="<?php echo $code; ?>" />
 									</dd>
 								</dl>
 
@@ -124,7 +123,7 @@
 
 
 		<!-- Copy content -->
-		<div class="tabcontent">
+		<div class="tabcontent p20">
 
 			<dl class="small">
 				<dt>
@@ -163,7 +162,7 @@
 
 
 		<!-- URLs -->
-		<div class="tabcontent">
+		<div class="tabcontent p20">
 
 			<form name="optionsLangForm" id="optionsLangForm" method="post" action="<?php echo admin_url(); ?>lang/update">
 
@@ -202,7 +201,6 @@
 		</div>
 
 	</div>
-
 
 </div>
 
@@ -264,8 +262,3 @@
 	});
 
 </script>
-
-
-
-
-

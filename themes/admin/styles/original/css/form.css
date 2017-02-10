@@ -20,6 +20,10 @@ input[type="file"] > input[type="button"]::-moz-focus-inner {
     border: none;
 }
 
+input, textarea, select {
+	font-size: 1.1rem;
+}
+
 /* Form layout
 ---------------------------------------------------------------- */
 form {
@@ -43,9 +47,7 @@ fieldset {
 .panel dl,
 .mocha dl {
 	position:relative;
-	margin:1px 0 0;
-	overflow:hidden;
-	margin-bottom:5px;
+	margin:1px 0 5px 0;
 }
 .panel dl.last,
 .mocha dl.last {
@@ -56,38 +58,59 @@ fieldset {
 	clear: left;
 	float:left;
 	margin:0 0 0 0;
-	padding: 0;
+	padding: 0 15px 0 0;
 	text-align:right;
 	font-weight: normal;
-/*	width:150px;*/
-/*
-	min-width:130px;
-*/
-	width:18%;
-}
-.panel dt label,
-.mocha dt label {
+	width:20%;
+	display:table;
+	min-height: 26px;
 }
 .panel dt.left,
 .mocha dt.left {
 	text-align: left;
 }
+.panel dt > label,
+.mocha dt > label{
+	vertical-align: middle;
+	display: table-cell;
+	height: 26px;
+	text-align: right;
+	width: 100%;
+	left: 100% !important;
+	color: #999;
+    /*
+	white-space: nowrap;
+    */
+}
+.panel dt > h4,
+.mocha dt > h4{
+	margin: 0 !important;
+}
+
+.panel dd > a.icon,
+.mocha dd > a.icon{
+	margin-top: 4px;
+}
+
 .panel dd,
 .mocha dd {
-	margin:0;
-	margin-left: 22%;
+	margin:0 0 0 20%;
 	padding:0;
-	width: 78%;
+	width: 80%;
 	position: relative;
+	min-height: 26px;
+	vertical-align: middle;
 }
 .panel dd.nomargin,
 .mocha dd.nomargin {
 	margin-left: 0;
 	width: auto;
 }
-
-.content-panel-content dt{width:25%;}
-.content-panel-content dd{margin-left:26%;width: 74%;}
+.panel dd label,
+.mocha dd label{
+    min-height:26px;
+    line-height: 26px;
+}
 
 /* Small DL, used in side column and in some windows */
 .panel dl.small,
@@ -124,9 +147,17 @@ fieldset {
 }
 
 dl.required dt label { color:#b00;}
-dl.required dd input, dl.required dd textarea, dl.required dd select { border-color: #666;}
+dl.required dd input,
+dl.required dd input[required],
+dl.required dd textarea,
+dl.required dd select { border-color: #666;}
 
-dd .inputcheckbox:first-child{margin-top:2px;}
+
+dl.not-editable {min-height: 18px;}
+dl.not-editable dt {min-height: 18px;}
+dl.not-editable dt label {height: 18px;}
+dl.not-editable dd {min-height: 18px;}
+
 
 /* Mocha Windows correction */
 .mochaContent dd { 
@@ -186,21 +217,20 @@ div.label:hover {
 }
 
 label {
-	font-size: 11px;
 	margin: 0 10px;
 }
 label[for] { cursor: pointer; }
 label.required {
 	color:#b00;
 }
-label.toggler {
+label.toggler,
+label.block {
 	display: block;
 }
 label[title]
 {
 	background: url("../images/icon_12_label_help.png") no-repeat scroll right top transparent;
 	padding-right: 14px;
-	border-bottom: dotted 1px #94aec9;
 }
 table thead tr td label[title],
 table thead tr th label[title],
@@ -219,12 +249,7 @@ label.over textarea{
 	margin-bottom: 5px;
 }
 
-input, textarea, select {
-	font-family:"lucida grande",tahoma,verdana,arial,sans-serif;
-	font-size:11px;
-}
 input.required, textarea.required, select.required{
-	border-color: #b00;
 	border-color: #e2800d;
 }
 textarea{
@@ -244,7 +269,6 @@ select optgroup{
 	color:#555;
 	font-weight: bold;
 	font-style: normal;
-
 }
 select optgroup option {
 }
@@ -255,12 +279,34 @@ dl.small .select {
 /*	max-width: 150px;*/
 }
 .inputtext {
-	border:1px solid #bbb;
-	padding:4px;
-	width:82%;
+	border: 1px solid #bbb;
+	padding: 4px;
+	font-size: 1.1rem;
+	min-height: 26px;
+}
+dd input[type="checkbox"]{
+	margin-top:5px;
+    /*
+	vertical-align:middle;
+    */
+}
+input[type="text"],
+input[type="password"],
+input[type="date"],
+input[type="datetime"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"],
+input[type="email"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="time"],
+input[type="url"] {
+	height:26px;
 }
 .inputtext.date {
-	width:120px;
+	width:130px;
 }
 .inputtext:focus,
 textarea:focus {
@@ -271,57 +317,82 @@ textarea:focus {
 input.italic {font-style: italic;}
 input.center {text-align: center}
 
+input.color{
+	width: 80px;
+	top:1px;
+	right: 0;
+	height: 22px;
+	padding: 4px;
+	text-align: center;
+	border:none;
+}
+
 /* Droppable areas */
 div.droppable,
 ul.droppable{
+	min-height: 30px;
+	padding: 2px 2px 2px 45px;
+}
+
+div.droppable{
 	padding: 8px 10px 8px 45px;
+	font-style: italic;
 	position: relative;
 }
+ul.droppable:before,
 li.droppable:before,
-div.droppable:before,
-ul.droppable:before {
+div.droppable:before {
 	content: url("../images/icon_24_drop_static.png");
 	position: absolute;
 	left: 8px;
-	top: 1px;
+	top: 0;
 	opacity: 0.25;
-	filter:alpha(opacity=0.25);
 	filter: progid:DXImageTransform.Microsoft.Alpha(opacity=0.25);
 }
+ul.droppable.onenter,
 li.droppable.onenter,
-div.droppable.onenter,
-ul.droppable.onenter {
+div.droppable.onenter {
 	background:url("../images/bg-gray-dark.png") repeat scroll 0 0 transparent;
 	color: #353c43;
-	border-color: transparent;
 }
+ul.droppable.onenter.filled,
+li.droppable.onenter.filled,
+div.droppable.onenter.filled {
+	background:transparent !important;
+	color: #353c43;
+}
+ul.droppable.onenter:before,
 li.droppable.onenter:before,
-div.droppable.onenter:before,
-ul.droppable.onenter:before {
+div.droppable.onenter:before {
 	content: url("../images/icon_24_drop_onenter.png");
 	opacity:.50;
 	position:absolute;
-	left: 8px;
+	left: 10px;
 	-webkit-animation:dropenter .8s ease-out infinite;
 	-moz-animation:dropenter .8s ease-out infinite;
 	-o-animation:dropenter .8s ease-out infinite;
 	animation:dropenter .8s ease-out infinite;
 }
+ul.droppable.onenter.filled:before,
+li.droppable.onenter.filled:before,
+div.droppable.onenter.filled:before {
+	content: url("../images/icon_24_drop_onenter_dark.png");
+}
 
 @keyframes dropenter {
-	0%   {top:0px;opacity: 1;}
+	0%   {top:0;opacity: 1;}
 	100% {top:90%;opacity: 0;}
 }
 @-moz-keyframes dropenter {
-	0%   {top:0px;opacity: 1;}
+	0%   {top:0;opacity: 1;}
 	100% {top:90%;opacity: 0;}
 }
 @-webkit-keyframes dropenter {
-	0%   {top:0px;opacity: 1;}
+	0%   {top:0;opacity: 1;}
 	100% {top:90%;opacity: 0;}
 }
 @-o-keyframes dropenter {
-	0%   {top:0px;opacity: 1;}
+	0%   {top:0;opacity: 1;}
 	100% {top:90%;opacity: 0;}
 }
 
@@ -334,18 +405,21 @@ textarea.droppable {
 	font-style: italic;
 	color:#999;
 }
-ul.droppable,
 li.droppable,
 div.droppable,
+ul.droppable,
 input.droppable.empty,
 textarea.droppable.empty {
 	background-color:#fff;
 	border: dashed 1px #ccc;
+	position: relative;
 }
 div.droppable.hover,
+ul.droppable.hover,
 input.droppable.hover,
 textarea.droppable.hover {
 	background-color: #df8;
+	border-color: transparent;
 }
 div.droppable.nofocus,
 input.nofocus,
@@ -354,13 +428,10 @@ textarea.nofocus,
 textarea.droppable.nofocus {
 	background-color:#f8f8f8;
 }
-.droppable.filled{
-	border-color: transparent;
-	padding: 2px 0 2px 45px;
+div.droppable,
+ul.droppable {
+	margin-top:-3px;
 }
-
-
-
 .focus,
 input.focus,
 input.droppable.focus,
@@ -368,12 +439,30 @@ textarea.focus,
 textarea.droppable.focus {
 	background-color:#fdfced !important;
 }
-
-
-input.date {
-	float:left;
-/*	margin-right:5px;*/
+.droppable.filled{
+	border-color: transparent;
+	padding: 2px 0 2px 45px;
+	margin-top:-3px;
+	background-color:transparent;
 }
+.column:before{
+	content:"";
+}
+.column.onenter:before,
+.pad.onenter:before{
+	content:"";
+	position: absolute;
+	display: block;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	opacity: .8;
+	background: #00409F url(../images/upload_overlay_arrow.png) no-repeat 50% 50%;
+	z-index: 1;
+	animation: none;
+}
+
 .inputcheckbox {}
 .inputradio {}
 .inputicon {
@@ -386,11 +475,15 @@ input.button,
 button.submit,
 input.submit{
 	border:1px solid #fff;
-	color:#FFFFFF;
+	color:#333;
 	cursor:pointer;
-	font-size:11px;
+	font-size: 1.1rem;
 	line-height: 20px;
 	vertical-align: middle;
+}
+button.submit,
+input.submit{
+	color:#fff;
 }
 button.button,
 button.submit {
@@ -398,7 +491,7 @@ button.submit {
 }
 input.button,
 input.submit{
-	padding:5px 8px;
+	padding:3px 8px;
 }
 
 a.button.disabled,
@@ -416,9 +509,7 @@ input.submit.disabled:hover{
 	cursor: default;
 }
 
-/* Special form elements */
-#maincolumn .inputtext,
-#maincolumn .textarea {
+#maincolumn .inputtext, #maincolumn .textarea {
 	width: 82%;
 }
 
@@ -447,21 +538,13 @@ input.submit.disabled:hover{
 a.button {
 	background: url(../images/bg-gray-light.png);
 	color:#098ED1;
-	border-radius: 0px;
+	border-radius: 0;
 	margin:0;
 	cursor:pointer;
-	font-size:11px;
 	padding:3px 6px;
-	vertical-align: middle;
 	height:auto;
 	display: inline-block;
 	vertical-align: middle;
-}
-.button:hover
-a.button:hover {
-	background: url(../images/bg-gray-medium.png);
-	border:1px solid #bbb;
-
 }
 .button.active{
 	background: url(../images/bg-gray-medium.png);
@@ -473,9 +556,12 @@ a.button i{
     height: 16px;
     display: inline-block;
     float: left;
-    margin-right:5px;
+    margin-right:8px;
 	margin-top: 1px;
     background:transparent url(../images/icons_16.png) no-repeat 0 0;
+}
+a.button span{
+	line-height: 18px;
 }
 
 /* Special buttons */
@@ -500,9 +586,14 @@ a.button.submit:hover {
 }
 
 .button.yes,
+button.button.yes,
+input.button.yes,
 a.button.yes,
+button.button.green,
+input.button.green,
 .button.green,
 a.button.green,
+button.submit,
 .submit,
 a.button.submit{
 	color:#fff;
@@ -519,6 +610,7 @@ a.button.submit:hover{
 }
 .button.no, a.button.no,
 .button.cancel, a.button.cancel,
+.button.delete, a.button.delete,
 .button.red, a.button.red {
 	color:#fff !important;
 	background: #B63C1A;
@@ -540,6 +632,18 @@ a.button.submit:hover{
 	background: #2E68A2;
 }
 
+.button.light.info:hover, a.button.light.info:hover,
+.button.light.blue:hover, a.button.light.blue:hover,
+.button.light.green:hover, a.button.light.green:hover,
+.button.light.cancel:hover, a.button.light.cancel:hover,
+.button.light.yes:hover, a.button.light.yes:hover,
+.button.light.no:hover, a.button.light.no:hover,
+.button.light.gray:hover, a.button.light.gray:hover,
+.button.light.brown:hover, a.button.light.brown:hover,
+.button.light.yellow:hover, a.button.light.yellow:hover,
+.button.light.red:hover, a.button.light.red:hover {
+	border: 1px solid transparent;
+}
 
 .button.gray, a.button.gray {
 	color:#fff;
@@ -550,7 +654,6 @@ a.button.submit:hover{
 	color:#fff;
 	background: #888C8D;
 }
-
 
 .button.brown, a.button.brown {
 	color:#fff;
@@ -572,16 +675,15 @@ a.button.submit:hover{
 	background: #E29602;
 }
 
-
-
-.mocha .button.yes { margin-right: 40px;margin-left:10px;}
-.mocha.modal .button.yes{ margin-right: 35px;}
+.mocha .button{border: solid 1px #fff;padding-left:8px;padding-right:8px;}
+.mocha .button.right{margin-left:10px;}
+.mocha.modal .button.right{}
 
 /* Light buttons */
-button.light{color:#098ED1}
 .button.light {
     border: 1px solid transparent;
     background: none;
+	color:#444;
 }
 .button.light:hover {
     border:1px solid #bbb;
@@ -609,6 +711,59 @@ button.light{color:#098ED1}
 	border:none;
 }
 
+/* Toolbar button with dropdown */
+.btn-toolbar .btn-group {float: left;}
+
+.btn-group {
+	display: inline-block;
+	position: relative;
+	vertical-align: middle;
+}
+.caret {
+	border-color: #000000 rgba(0, 0, 0, 0);
+	border-style: solid solid dotted;
+	border-width: 5px 4px 0;
+	content: "";
+	display: inline-block;
+	height: 0;
+	margin-left: 5px;
+	vertical-align: middle;
+	width: 0;
+	margin-top: -2px;
+}
+.open > .dropdown-menu {display: block;}
+.dropdown-menu {
+	background-clip: padding-box;
+	background-color: #FFFFFF;
+	border: 1px solid #bbb;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.07);
+	text-align: left;
+	display: none;
+	float: left;
+	left: 0;
+	list-style: none outside none;
+	margin: 2px 0 0;
+	min-width: 160px;
+	padding: 3px 0;
+	position: absolute;
+	top: 100%;
+	z-index: 1000;
+}
+.dropdown-menu > li > a {
+	clear: both;
+	color: #3F3F3F;
+	display: block;
+	font-weight: normal;
+	line-height: 1.42857;
+	padding: 3px 20px;
+	white-space: nowrap;
+}
+.dropdown-menu > li > a:hover {
+	background: #93adc8;
+	color:#fff;
+}
+
+
 /* Buttons specific context */
 .tabsidecolumn .button.light,
 .panelAlt .button.light {
@@ -626,31 +781,11 @@ button.light{color:#098ED1}
 	border: 1px solid transparent;
 	background-color: transparent;
 	color:#098ED1;
-	margin:0px;
+	margin:0;
 	cursor:pointer;
 	padding:2px 6px;
 	height: 24px;
 	vertical-align: middle;
-}
-.toolbar-button.plus, .light-button.plus { background:url(../images/icon_16_plus.png) no-repeat 4px 50%; padding-left: 24px; }
-.toolbar-button.minus, .light-button.minus { background:url(../images/icon_16_minus.png) no-repeat 4px 50%; padding-left: 24px; }
-.toolbar-button.files, .light-button.files { background:url(../images/icon_16_files.png) no-repeat 4px 50%; padding-left: 24px; }
-.toolbar-button.music, .light-button.music { background:url(../images/icon_16_music.png) no-repeat 4px 50%; padding-left: 24px; }
-.toolbar-button.delete, .light-button.delete { background:url(../images/icon_16_delete.png) no-repeat 4px 50%; padding-left: 24px; }
-.toolbar-button.video, .light-button.video { background:url(../images/icon_16_video.png) no-repeat 4px 50%; padding-left: 24px; }
-.toolbar-button.refresh, .light-button.refresh { background:url(../images/icon_16_refresh.png) no-repeat 4px 50%; padding-left: 24px; }
-.toolbar-button.pictures, .light-button.pictures { background:url(../images/icon_16_pictures.png) no-repeat 4px 50%; padding-left: 24px; }
-.toolbar-button.back, .light-button.back { background:url(../images/icon_16_left.png) no-repeat 4px 50%; padding-left: 24px; }
-.toolbar-button.helpme, .light-button.helpme { background:url(../images/icon_16_helpme.png) no-repeat 4px 50%; padding-left: 24px; }
-.toolbar-button.element, .light-button.element { background:url(../images/icon_16_element.png) no-repeat 4px 50%; padding-left: 24px; }
-.toolbar-button.print, .light-button.print { background:url(../images/icon_16_print.png) no-repeat 4px 50%; padding-left: 24px; }
-.toolbar-button.search, .light-button.search { background:url(../images/icon_16_search.png) no-repeat 4px 50%; padding-left: 24px; }
-.toolbar-button.calendar, .light-button.calendar { background:url(../images/icon_16_calendar.png) no-repeat 4px 50%; padding-left: 24px; }
-.toolbar-button.alert, .light-button.alert { background:url(../images/icon_16_alert.png) no-repeat 4px 50%; padding-left: 24px; }
-
-.toolbar-button:hover, .light-button:hover {
-	border:1px solid #bbb;
-	background-color: #fff !important;
 }
 
 /* Toolbox inputs */
@@ -698,4 +833,11 @@ ul.list .upload-item a {
 	background: url(../images/icons_16.png) no-repeat 0 0;
 	background-position: -160px -64px;
 	text-indent: -999em;
+}
+
+.form-field,
+dd > .form-field {
+	line-height: 26px;
+	min-height: 26px;
+	padding: 0;
 }

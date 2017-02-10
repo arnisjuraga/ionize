@@ -38,6 +38,15 @@ class System_check_model extends Base_model
 	// ------------------------------------------------------------------------
 
 
+	public function get_todos()
+	{
+		$settings = Settings::get_settings();
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
 	/**
 	 * Checks the pages levels.
 	 * @access	public

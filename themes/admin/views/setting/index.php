@@ -37,7 +37,7 @@
 				<!-- Tabs content blocks -->
 				<?php foreach(Settings::get_languages() as $language) :?>
 					
-					<div class="tabcontent">
+					<div class="tabcontent p20">
 					
 						<!-- Title -->
 						<dl>
@@ -72,9 +72,9 @@
 				<?php endforeach ;?>
 
 				<!-- Emails -->
-				<div class="tabcontent">
+				<div class="tabcontent p20">
 
-					<div class="pt20">
+					<div>
 						<?php
 						$emails = array('contact', 'info', 'technical');
 						?>
@@ -94,7 +94,7 @@
 
 
 				<!-- Google Analytics -->
-				<div class="tabcontent">
+				<div class="tabcontent p20">
 					<dl>
 						<dt>
 							<label for="google_analytics_id" title="<?php echo lang('ionize_help_setting_google_analytics_id'); ?>"><?php echo lang('ionize_label_google_analytics_id'); ?></label>
@@ -157,7 +157,7 @@
 			
 
 			<!-- SEO -->
-			<div class="tabcontent">
+			<div class="tabcontent pt20">
 
 				<!-- Compress Sitemap XML -->
 				<form name="sitemapGzipForm" id="sitemapGzipForm" method="post" action="<?php echo admin_url(); ?>setting/save_setting">
@@ -174,8 +174,24 @@
 						</dd>
 					</dl>
 				</form>
-				
-				
+
+				<!-- Generate Sitemap after each page or article change -->
+				<form name="sitemapAutoForm" id="sitemapAutoForm" method="post" action="<?php echo admin_url(); ?>setting/save_setting">
+
+					<input type="hidden" name="config_file" value="sitemaps" />
+					<input type="hidden" name="setting" value="sitemaps_auto_create" />
+
+					<dl class="last">
+						<dt>
+							<label for="sitemaps_auto_create" title="<?php echo lang('ionize_help_setting_sitemaps_auto_create'); ?>"><?php echo lang('ionize_label_sitemaps_auto_create'); ?></label>
+						</dt>
+						<dd>
+							<input class="inputcheckbox" <?php if (config_item('sitemaps_auto_create') == '1'):?>checked="checked"<?php endif;?> type="checkbox" name="setting_value" id="sitemaps_auto_create" value="true" />
+						</dd>
+					</dl>
+				</form>
+
+
 				<h3><?php echo lang('ionize_title_sitemap_search_engine'); ?></h3>
 				
 				<!-- Sitemaps Search Engines -->
@@ -187,7 +203,7 @@
 					
 					<div class="summary r10">
 					
-						<p><?php echo lang('ionize_text_sitemaps_url_list'); ?> :</p>
+						<p><?php echo lang('ionize_text_sitemaps_url_list'); ?>:</p>
 						<p><textarea class="w400 h80" name="setting_value"><?php echo implode("\n", config_item('sitemaps_search_engines')); ?></textarea></p>
 						<input id="submit_sitemap_url" type="submit" class="submit" value="<?php echo lang('ionize_button_save'); ?>" />
 						
@@ -203,15 +219,12 @@
 					<input type="hidden" name="type" value="permalink_ping" />
 
 					<div class="summary r10">
-
-						<p><?php echo lang('ionize_text_ping_url_list'); ?> :</p>
-						<p><textarea class="w400 h80" name="urls"><?php echo str_replace("|", "\n", Settings::get('permalink_ping_urls')); ?></textarea></p>
+						<p><?php echo lang('ionize_text_ping_url_list'); ?>:</p>
+						<p><textarea class="w400 h80" name="urls"><?php echo str_replace('|', "\n", Settings::get('permalink_ping_urls')); ?></textarea></p>
 						<input id="submit_ping_url" type="submit" class="submit" value="<?php echo lang('ionize_button_save'); ?>" />
-						
 					</div>
 				</form>
 
-			
 			</div>
 
 		</div>
@@ -235,11 +248,9 @@
 
 
 	// SEO URLs forms action
-	ION.setFormSubmit('pingUrlForm', 'submit_ping_url', 'setting/save_seo_urls', 'mainPanel', 'setting/technical');
-	
-	ION.setFormSubmit('sitemapUrlForm', 'submit_sitemap_url', 'setting/save_setting', 'mainPanel', 'setting/technical');
-
-	ION.setChangeSubmit('sitemapGzipForm', 'sitemaps_gzip', 'setting/save_setting', 'mainPanel', 'setting/technical');
-
+	ION.setFormSubmit('pingUrlForm', 'submit_ping_url', 'setting/save_seo_urls');
+	ION.setFormSubmit('sitemapUrlForm', 'submit_sitemap_url', 'setting/save_setting');
+	ION.setChangeSubmit('sitemapGzipForm', 'sitemaps_gzip', 'setting/save_setting');
+	ION.setChangeSubmit('sitemapAutoForm', 'sitemaps_auto_create', 'setting/save_setting');
 
 </script>

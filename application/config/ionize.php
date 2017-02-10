@@ -6,8 +6,8 @@
 |--------------------------------------------------------------------------
 |
 */
-$config['version'] = '1.0.6.1';
-$config['version_date'] = '2014.05.05';
+$config['version'] = '1.0.9';
+$config['version_date'] = '2016.04.01';
 
 
 /*
@@ -90,7 +90,7 @@ $config['special_uri'] = array(	'category' => 'category',
 |--------------------------------------------------------------------------
 |
 */
-$config['form_antispam_key'] = "yourAntiSpamKey_ShouldContainsNumbersAndChars";
+$config['form_antispam_key'] = 'yourAntiSpamKey_ShouldContainsNumbersAndChars';
 
 
 /**
@@ -145,7 +145,29 @@ $config['maintenance_ips'] = array (
 | To remove useless whitespace from generated HTML
 |
 */
-$config['compress_html_output'] = '0';
+$config['compress_html_output'] = false;
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Beautify HTML output
+|--------------------------------------------------------------------------
+|
+| To remove double whitespace lines and indent generated HTML correctly
+|
+*/
+$config['beautify_html_output'] = false;
+
+
+/*
+|--------------------------------------------------------------------------
+| Log system number of lines
+|--------------------------------------------------------------------------
+|
+*/
+
+$config['log_nb_lines'] = '50';
 
 
 /* End of file ionize.php */

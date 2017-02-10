@@ -81,38 +81,14 @@ class Extend_fields_model extends Base_model
 
 			// Limit extend_fields to the asked lang
 			$this->{$this->db_group}->where(
-				"(" .$this->get_table().".lang = '".$lang."' OR "
-					.$this->get_table().".lang is NULL  OR "
-					.$this->get_table().".lang =''"
-				.")"
+				'(' .$this->get_table().".lang = '".$lang."' OR "
+					.$this->get_table().'.lang is NULL  OR '
+					.$this->get_table().".lang =''
+				)"
 			);
 		}
 
 		return parent::get_lang_list($where);
-	}
-
-
-	// ------------------------------------------------------------------------
-
-
-	public function _join_to_extend_types()
-	{
-		// Join to types
-		$this->{$this->db_group}->select(
-			self::$_TYPE_TABLE . '.type_name,'
-			.self::$_TYPE_TABLE . '.active,'
-			.self::$_TYPE_TABLE . '.validate,'
-			.self::$_TYPE_TABLE . '.html_element,'
-			.self::$_TYPE_TABLE . '.html_element_type,'
-			.self::$_TYPE_TABLE . '.html_element_class,'
-			.self::$_TYPE_TABLE . '.html_element_pattern'
-		);
-
-		$this->{$this->db_group}->join(
-			self::$_TYPE_TABLE,
-			self::$_TYPE_TABLE . '.id_extend_field_type = ' . self::$_EXTEND . '.type',
-			'inner'
-		);
 	}
 
 
@@ -146,34 +122,33 @@ class Extend_fields_model extends Base_model
 			$types_names = array_keys($types);
 
 			$sql = "
-				select
-					COALESCE(" . implode('_lang.title,', $types_names) . '_lang.title' . ") as title,
+				SELECT
+					COALESCE(" . implode('_lang.title,', $types_names) . '_lang.title' . ") AS title,
 					url.id_entity,
 					url.type,
 					url.full_path_ids,
 					url.path,
 					REPLACE(url.full_path_ids, '/', '.' ) as rel
-				from url
+				FROM url
 			";
 
-			$join = "";
+			$join = '';
 			$where_arr = array();
 
 			foreach($types as $type => $entities)
 			{
-				$join .= "
-					left join ".$type." on (".$type.".id_".$type." = url.id_entity and url.type = '".$type."')
-					left join ".$type."_lang on ".$type."_lang.id_".$type." = ".$type.".id_".$type." and ".$type."_lang.lang = '".$lang."'
+				$join .= '
+					LEFT JOIN '.$type.' ON ('.$type.'.id_'.$type." = url.id_entity AND url.type = '".$type."')
+					LEFT JOIN ".$type.'_lang ON '.$type.'_lang.id_'.$type.' = '.$type.'.id_'.$type.' AND '.$type."_lang.lang = '".$lang."'
 				";
 
-				$where_arr[] = "(type='".$type."' and id_entity in (" . implode(',', $entities). "))";
+				$where_arr[] = "(type='".$type."' AND id_entity IN (" . implode(',', $entities). '))';
 			}
 
-			$sql .= $join;
-			$sql .= "where (" . implode(' or ', $where_arr) . ")";
-			$sql .= "
-				and url.lang = '".$lang."'
-				and active = 1
+			$sql .= $join
+				. 'WHERE (' . implode(' OR ', $where_arr) . ")
+				   AND url.lang = '".$lang."'
+			 	   AND active = 1
 			";
 
 			$query = $this->{$this->db_group}->query($sql);
@@ -185,4 +160,36 @@ class Extend_fields_model extends Base_model
 		return $data;
 	}
 
+
+	// ------------------------------------------------------------------------
+
+
+	public function get_parents_from_extend_where($parent, $extends)
+	{
+
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
+	public function _join_to_extend_types()
+	{
+		// Join to types
+		$this->{$this->db_group}->select(
+			self::$_TYPE_TABLE . '.type_name,'
+			.self::$_TYPE_TABLE . '.active,'
+			.self::$_TYPE_TABLE . '.validate,'
+			.self::$_TYPE_TABLE . '.html_element,'
+			.self::$_TYPE_TABLE . '.html_element_type,'
+			.self::$_TYPE_TABLE . '.html_element_class,'
+			.self::$_TYPE_TABLE . '.html_element_pattern'
+		);
+
+		$this->{$this->db_group}->join(
+			self::$_TYPE_TABLE,
+			self::$_TYPE_TABLE . '.id_extend_field_type = ' . self::$_EXTEND . '.type',
+			'inner'
+		);
+	}
 }
